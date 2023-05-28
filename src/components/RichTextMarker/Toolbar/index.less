@@ -1,0 +1,30 @@
+.rich_text_marker__toolbar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 999999;
+    height: 30px;
+    line-height: 30px;
+    color: #fff;
+    text-align: center;
+    background: #484848;
+    border-radius: 5px;
+    cursor: pointer;
+
+    &::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #484848;
+        width: 0px;
+        height: 0px;
+        top: 100%;
+    }
+
+    .rich_text_marker__toolbar__item {
+        padding: 0 4px;
+        font-size: 12px;
+    }
+}
