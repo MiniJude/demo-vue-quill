@@ -1,169 +1,203 @@
-import { JSONContent } from './parser'
+import { HTMLParser, JSONToHTML, JSONContent, DataSetString } from './parser'
+import { hasAttrByNode, hasStatusByNode, addStatusByNode } from './domUtils'
 export default function useDFS(tempStartOffset: number, tempEndOffset: number, className: string = 'underline') {
     function refreshContentIndex(content: JSONContent[]) {
         content.forEach((item, index) => item.index = index)
     }
 
     let lock = true
-    const dfs = (root: JSONContent) => {
+    const dfs = (root: any) => {
         if (!root) return
-        if (root.attributes?.class === 'select_start select_end') {
-            if (root.parent.type !== 'span') {
-                if (typeof root.content[0].content === 'string') {
-                    const sentence = root.content[0].content
-                    const prefix = sentence.slice(0, tempStartOffset)
-                    const selected = sentence.slice(tempStartOffset, tempEndOffset)
-                    const suffix = sentence.slice(tempEndOffset)
-                    root.parent.content[root.index] = {
-                        type: 'span',
-                        attributes: { class: className },
-                        content: [{
-                            type: 'text',
-                            content: selected,
-                            parent: null as unknown as JSONContent,
-                            index: 0
-                        }],
-                        parent: root.parent,
-                        index: root.index
-                    }
-                    root.parent.content[root.index].content[0].parent = root.parent.content[0]
-                    if (tempStartOffset) {
-                        root.parent.content.splice(root.index, 0, {
-                            type: 'text',
-                            content: prefix,
-                            parent: root.parent,
-                            index: root.index
-                        })
-                    }
-                    if (tempEndOffset < sentence.length) {
-                        root.parent.content.splice(root.index + (tempStartOffset ? 2 : 1), 0, {
-                            type: 'text',
-                            content: suffix,
-                            parent: root.parent,
-                            index: root.index
-                        })
-                    }
-                    refreshContentIndex(root.parent.content)
-                } else {
-                    root.attributes.class = className // todo 处理类名这里不能直接赋值
-                }
-            } else {
-                if (root.parent.attributes?.class.includes(className)) {
-                    root.content[0].parent = root.parent
-                    root.parent.content[root.index] = root.content[0]
-                } else {
-
-                }
-            }
-            return
-        }
-        if (root.attributes?.class === 'select_start') {
-            if (root.parent.type !== 'span') {
-                if (typeof root.content[0].content === 'string') {
-                    let text = root.content[0].content as unknown as string
-                    let prefix = text.slice(0, tempStartOffset)
-                    let suffix = text.slice(tempStartOffset)
-                    root.parent.content[root.index] = {
-                        type: 'text',
-                        content: prefix,
-                        parent: root.parent,
-                        index: 0
-                    }
-                    if (!suffix) return
-                    let suffixSpan: JSONContent = {
-                        type: 'span',
-                        attributes: { class: className },
-                        content: [{
-                            type: 'text',
-                            content: suffix,
-                            parent: null as unknown as JSONContent,
-                            index: 0
-                        }],
-                        parent: root.parent,
-                        index: 1,
-                    }
-                    suffixSpan.content[0].parent = suffixSpan
-                    root.parent.content.splice(root.index + 1, 0, suffixSpan)
-                    refreshContentIndex(root.parent.content)
-                } else {
-                    root.attributes.class = className // todo 处理类名这里不能直接赋值
-                }
-            } else {
-                if (root.parent.attributes?.class.includes(className)) {
-                    root.content[0].parent = root.parent
-                    root.parent.content[root.index] = root.content[0]
-                } else {
-
-                }
-            }
-            lock = false
-        }
-        if ((root.type === 'text' || root.type === 'img' || root.attributes?.class?.includes('ql-formula')) && !lock) {
-            if (root.parent.type !== 'span') {
-                root.parent.content[root.index] = {
+        let index = root.index,
+            type = root.type,
+            spanWrapper = null
+        if (hasAttrByNode(root, 'select_start', 'select_end')) {
+            // 选区属于同一节点（都是文字、都是图片）
+            let parent = root.parent
+            if (type === 'text') {
+                if (parent.attributes?.class?.includes(className)) return // 重复状态
+                const sentence = root.content
+                const prefix = sentence.slice(0, tempStartOffset)
+                const selected = sentence.slice(tempStartOffset, tempEndOffset)
+                const suffix = sentence.slice(tempEndOffset)
+                // 插入状态节点
+                spanWrapper = {
                     type: 'span',
                     attributes: { class: className },
-                    index: root.index,
-                    content: [root],
-                    parent: root.parent
+                    content: [{
+                        type: 'text',
+                        content: selected,
+                        parent: null as any,
+                        index: 0
+                    }],
+                    parent,
+                    index
                 }
-            } else {
-                root.parent.attributes!.class = className // todo 处理类名这里不能直接赋值
-            }
-        }
-        if (root.attributes?.class === 'select_end') {
-            if (root.parent.type !== 'span') {
-                if (!root.content.length) {
-                    // span.select_end 包裹了空内容
-                    root.parent.content.shift()
-                } else if (root.content[0].type === 'img') {
-                    // span.select_end 包裹了图片
-                    root.attributes.class = className // todo 处理类名这里不能直接赋值
-                } else if (root.content[0].type === 'text') {
-                    // span.select_end 包裹了文本
-                    let prefix = root.content[0].content.slice(0, tempEndOffset)
-                    let suffix = root.content[0].content.slice(tempEndOffset)
-                    root.parent.content[root.index] = {
+                spanWrapper.content[0].parent = spanWrapper
+                parent.content[index] = spanWrapper
+
+                if (tempStartOffset) {
+                    parent.content.splice(index, 0, {
+                        type: 'text',
+                        content: prefix,
+                        parent,
+                        index
+                    })
+                }
+                if (tempEndOffset < sentence.length) {
+                    parent.content.splice(index + (tempStartOffset ? 2 : 1), 0, {
                         type: 'text',
                         content: suffix,
-                        parent: root.parent,
-                        index: root.index
+                        parent,
+                        index
+                    })
+                }
+            } else if (type === 'img') {
+                spanWrapper = {
+                    type: 'span',
+                    attributes: { class: className },
+                    index,
+                    content: [root],
+                    parent
+                }
+                root.parent = spanWrapper
+                parent.content[index] = spanWrapper
+            } else {
+                throw new Error('unexpected case')
+            }
+            refreshContentIndex(parent.content)
+            return
+        }
+
+        if (hasAttrByNode(root, 'select_start')) {
+            let parent = root.parent
+            if (parent.type !== 'span') {
+                if (root.type === 'text') {
+                    // 以文本节点为选区起点
+                    let text = root.content
+                    let prefix = text.slice(0, tempStartOffset)
+                    let suffix = text.slice(tempStartOffset)
+                    parent.content[index] = {
+                        type: 'text',
+                        content: prefix,
+                        parent,
+                        index
                     }
-                    // if (!prefix) return
-                    let prefixSpan: JSONContent = {
+                    if (!suffix) return
+                    spanWrapper = {
                         type: 'span',
                         attributes: { class: className },
                         content: [{
                             type: 'text',
-                            content: prefix,
-                            parent: null as unknown as JSONContent,
+                            content: suffix,
+                            parent: null as any,
                             index: 0
                         }],
-                        parent: root.parent,
-                        index: 0,
+                        parent,
+                        index: 1,
                     }
-                    prefixSpan.content[0].parent = prefixSpan
-                    root.parent.content.splice(root.index, 0, prefixSpan)
-                    refreshContentIndex(root.parent.content)
-                }
-            } else {
-                if (root.parent.attributes?.class.includes(className)) {
-                    root.content[0].parent = root.parent
-                    root.parent.content[root.index] = root.content[0]
+                    spanWrapper.content[0].parent = spanWrapper
+                    parent.content.splice(index + 1, 0, spanWrapper)
                 } else {
-
+                    // 包裹图片
+                    spanWrapper = {
+                        type: 'span',
+                        attributes: { class: className },
+                        content: [root],
+                        parent,
+                        index: 1,
+                    }
+                    root.parent = spanWrapper
+                    parent.content.splice(index, 1, spanWrapper)
+                }
+                refreshContentIndex(parent.content)
+            } else {
+                if (parent.attributes?.class.includes(className)) {
+                    // 不做处理
+                } else {
+                    throw new Error('unexpected case')
                 }
             }
             lock = true
+        } else if (hasAttrByNode(root, 'select_end')) {
+            let parent = root.parent
+            if (parent.type !== 'span') {
+                if (root.type === 'text') {
+                    // 以文本节点为选区终点
+                    let text = root.content
+                    let prefix = text.slice(0, tempEndOffset)
+                    let suffix = text.slice(tempEndOffset)
+                    parent.content[index] = {
+                        type: 'text',
+                        content: suffix,
+                        parent,
+                        index
+                    }
+                    if (!prefix) return
+                    spanWrapper = {
+                        type: 'span',
+                        attributes: { class: className },
+                        content: [{
+                            type: 'text',
+                            content: prefix,
+                            parent: null as any,
+                            index: 0
+                        }],
+                        parent,
+                        index: 0,
+                    }
+                    spanWrapper.content[0].parent = spanWrapper
+                    parent.content.splice(root.index, 0, spanWrapper)
+                    refreshContentIndex(root.parent.content)
+                } else if (root.type === 'img') {
+                    // 包裹图片
+                    spanWrapper = {
+                        type: 'span',
+                        attributes: { class: className },
+                        content: [root],
+                        parent,
+                        index: 1,
+                    }
+                    root.parent = spanWrapper
+                    parent.content.splice(index, 1, spanWrapper)
+                }
+            } else {
+                if (parent.attributes?.class.includes(className)) {
+                    // 不做处理
+                } else {
+                    throw new Error('unexpected case')
+                }
+            }
+            lock = false
+        } else if ((type === 'text' || type === 'img' || root.attributes?.class?.includes('ql-formula')) && !lock) {
+            let parent = root.parent
+            // 选区中间的节点（既不是开头也不是结尾）
+
+            if (parent.type !== 'span') {
+                spanWrapper = {
+                    type: 'span',
+                    attributes: { class: className },
+                    content: [root],
+                    parent,
+                    index
+                }
+                root.parent = spanWrapper
+                parent.content[root.index] = spanWrapper
+            } else {
+                // 叠加状态
+                addStatusByNode(root.parent, className)
+            }
         }
         // JSONToHTML(tree).then(html => console.log(html))
         if (root.content.length && root.type !== 'text') {
-            //  如果是公式的节点，不遍历其子节点
-            if (root.attributes?.class?.includes('ql-formula')) return
+            if (root.attributes?.class?.includes('ql-formula')) return //  如果是公式的节点，不遍历其子节点
+            if (hasStatusByNode(root)) return
             // fix: cannot use forEach here, because the length of root.content will change
-            for (let i = 0, child: JSONContent; child = root.content[i++];) {
+            for (let i = root.content.length - 1, child: JSONContent; child = root.content[i--];) {
                 dfs(child)
             }
+            // 给一个p标签尾部新增一个span状态标签，当退出p的text后回来p，这时p已经多了一个节点，导致for循环继续往下走，所以这里尝试用forEach
+            // root.content.forEach(dfs)
         }
     }
     return {
@@ -213,4 +247,35 @@ export function bfs(root: JSONContent) {
             queue.push(...node.content)
         }
     }
+}
+
+function uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0,
+            v = c == 'x' ? r : (r & 0x3 | 0x8)
+        return v.toString(16)
+    })
+}
+
+// 用data-m-xxxb标记每个节点
+export async function initTree(str: string): Promise<string> {
+    let tree = await HTMLParser(str)
+    // 初始化树：深度优先遍历给每个节点加上自定义属性，后续用来记录选区起始点
+    function markRoot(root: JSONContent) {
+        if (!root || !root.content?.length) return
+        // 加上data-m-xxx属性
+        if (!root.attributes) root.attributes = {}
+        let hasInit = Object.keys(root.attributes).some(key => key.startsWith('data-m-'))
+        if (!hasInit) root.attributes[('data-m-' + uuid()) as DataSetString] = ''
+        if (root.content.length) {
+            // 如果是公式的节点，不遍历其子节点
+            if (root.attributes?.class?.includes('ql-formula')) return
+            for (let i = 0, child: JSONContent; child = root.content[i++];) {
+                markRoot(child)
+            }
+        }
+    }
+    markRoot(tree)
+    let ans = await JSONToHTML(tree) as string
+    return ans
 }

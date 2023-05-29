@@ -1,11 +1,14 @@
 import { HTMLAttributes } from "vue"
-export enum TextType {
-  UNDERLINE = '画线', // 下划线
-  NOTE = '批注', // 笔记
+export enum Config {
+  'm_underline' = '画线',
+  'm_note' = '批注',
 }
+
+type ConfigKey = keyof typeof Config
+
 export interface Options {
   style: HTMLAttributes['style'],
-  config: TextType[]
+  config: Config[]
 }
 
 class Toolbar {
@@ -19,9 +22,21 @@ class Toolbar {
     this.toolbarElement.style.display = "none"
   }
 
+  private setEventListener(): void {
+    Object.keys(Config).forEach((key) => {
+      this.toolbarElement.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement
+        if (target.classList.contains('rich_text_marker__toolbar__item')) {
+          // resolve(target.innerText as Config)
+        }
+      })
+    })
+  }
+
   public static getInstance(): Toolbar {
     if (!Toolbar.instance) {
       Toolbar.instance = new Toolbar()
+      // document.addEventListener()
     }
     return Toolbar.instance
   }
@@ -37,7 +52,7 @@ class Toolbar {
 
   private handleOutsideClickWrapper: null | ((event: MouseEvent) => void) = null
 
-  public show(parentEle: HTMLElement, options: Options): Promise<TextType> {
+  public show(parentEle: HTMLElement, options: Options): Promise<Config> {
     this.toolbarElement.style.display = "block"
     // 设置工具条位置
     Object.assign(this.toolbarElement.style, options.style)
@@ -51,7 +66,7 @@ class Toolbar {
       this.toolbarElement.addEventListener('click', (e) => {
         const target = e.target as HTMLElement
         if (target.classList.contains('rich_text_marker__toolbar__item')) {
-          resolve(target.innerText as TextType)
+          resolve(target.innerText as Config)
         }
       })
       // 添加点击事件监听器以处理点击工具条以外的区域

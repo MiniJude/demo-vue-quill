@@ -18,10 +18,11 @@
 import { reactive } from 'vue'
 import VueQuillEditor from '@/components/VueQuillEditor.vue'
 import RichTextMarker from '@/components/RichTextMarker/index.vue'
+import { HTMLParser } from './components/RichTextMarker/parser';
 
 // 建议：公式和图片两侧都加空格！！！！
-let case1 = '<p>这是传入的htmlstr字符串</p><p>这是第二行文字</p><p>这是第3行文字</p>'
-let case2 = '<p>这是传入的htmlstr字符串</p><p>这是<span class="underline">第二行</span>文字</p><p>这是第3行文字</p>'
+let case1 = '<p>这是传入的htmlstr字符串</p><p>这是第二行文字</p>'
+let case2 = '<p>这是传入的htmlstr字符串</p><p>这是<span class="m_underline">第二行</span>文字</p><p>这是第3行文字</p>'
 let case3 = '<p>这是第二<img src="https://www.antdv.com/assets/logo.1ef800a8.svg">行<img src="https://www.antdv.com/assets/logo.1ef800a8.svg">文字</p>'
 let case4 = '<p>这是传入的htmlstr字符串</p><p>这是第二<img src="https://www.antdv.com/assets/logo.1ef800a8.svg"> 行 <img src="https://www.antdv.com/assets/logo.1ef800a8.svg"> 文字</p><p><img src="https://www.antdv.com/assets/logo.1ef800a8.svg">这是第3行文字</p>'
 let case5 = '<p>这是<strong>传入</strong>的<em>ht</em>mlstr字<img src="https://www.antdv.com/assets/logo.1ef800a8.svg">符串</p><p>这是<u>第二<img src="https://www.antdv.com/assets/logo.1ef800a8.svg"行</u>文<span class="ql-formula" data-value=" \tfrac{v}{d} ">﻿<span contenteditable="false"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mi>v</mi><mi>d</mi></mfrac></mrow><annotation encoding="application/x-tex"> \tfrac{v}{d} </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height: 1.0404em; vertical-align: -0.345em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.6954em;"><span class="" style="top: -2.655em;"><span class="pstrut" style="height: 3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">d</span></span></span></span><span class="" style="top: -3.23em;"><span class="pstrut" style="height: 3em;"></span><span class="frac-line" style="border-bottom-width: 0.04em;"></span></span><span class="" style="top: -3.394em;"><span class="pstrut" style="height: 3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right: 0.0359em;">v</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.345em;"><span class=""></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span>﻿</span> 字</p>'
@@ -34,5 +35,9 @@ const html = reactive<Record<string, string>>({
   case5,
   case6,
 })
+HTMLParser(case1).then(res => {
+  console.log(res)
+})
+
 
 </script>

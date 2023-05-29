@@ -1,8 +1,10 @@
 import { HTMLAttributes } from "vue"
 
+export type DataSetString = `data-${string}` 
+
 export interface JSONContent {
     type: string
-    attributes?: HTMLAttributes
+    attributes?: HTMLAttributes & Record<DataSetString, string>
     content: any
     parent: JSONContent
     index: number
@@ -41,6 +43,7 @@ export async function HTMLParser(element: Element | string): Promise<JSONContent
                                     object.content.push({
                                         type: 'text',
                                         content: nodeList[i].nodeValue,
+                                        attributes: (nodeList[i] as any).attributes,
                                         parent: object,
                                         index: i
                                     });

@@ -1,14 +1,15 @@
 import { computed, nextTick, ref, Ref } from 'vue'
 import { type JSONContent, HTMLParser, JSONToHTML } from './parser'
 import useDFS, { bfs } from './useAst'
-import { createNodeByStr, wrapNode } from './domUtils'
+import { createNodeByStr, getAttrIdByNode, setAttrByNode } from './domUtils'
 export default function useRichTextMarker(container: Ref<Element | null>) {
 
     const selection = ref<Selection | null>()
     const text = computed(() => selection.value?.toString() ?? '')
     const range = computed(() => selection.value?.getRangeAt(0) ?? null) // Selection API规范要求选择的内容始终（仅）具有一个范围，所以这里不考虑多个区域
-    // const rect = computed(() => selection.value?.getRangeAt(0).getBoundingClientRect() ?? null)
-    const rect = ref<DOMRect | null>(null)
+    const rect = computed(() => selection.value?.getRangeAt(0).getBoundingClientRect() ?? null)
+
+    let start_id = '', end_id = ''
 
     let tempStartOffset = 0, tempEndOffset = 0
 
@@ -16,13 +17,6 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
     async function setRichText(str: string) {
         console.log('setRichText')
         richText.value = str
-    }
-
-    function setRange(range: Range | null) {
-        console.log('setRange')
-        selection.value = window.getSelection()
-        selection.value?.removeAllRanges()
-        selection.value?.addRange(range)
     }
 
     function recoverRange() {
@@ -47,11 +41,11 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
 
     // 选区变化处理函数
     async function handleSelectionChange() {
-        if (!container.value) throw new Error('container is null')
+        if (!container.value) throw new Error('warning: container is null')
         selection.value = null // fix: 保证selection.value变化
         selection.value = window.getSelection()
         const isValid = await correctSelection()
-        if (!isValid) throw new Error('selection is invalid')
+        if (!isValid) throw new Error('warning: selection is invalid')
         // 在dom上标记选区
         tagDomRange()
     }
@@ -83,6 +77,71 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
     // 如果尾边界是新启一行的开头，则endContainer不是text节点，而是p节点
     // 如果尾边界在公式内，则很可能不是文本节点；此时要判断公式节点是否包含endContainer
     // 其他情况下，startContainer和endContainer都是text节点
+    // function tagDomRange() {
+    //     if (!range.value) return
+    //     const { collapsed, startContainer, endContainer, startOffset, endOffset } = range.value ?? {}
+    //     if (collapsed || !startContainer || !endContainer) return
+    //     // 保存startOffset, endOffset，因为后面会对选区进行操作，导致这两个值置0
+    //     tempStartOffset = startOffset
+    //     tempEndOffset = endOffset
+    //     let startSpan = null,
+    //         endSpan = null
+    //     let isSameContainer = (startContainer === endContainer);
+
+    //     // 如果两侧边界都是text
+    //     if (startContainer.nodeName === '#text' && endContainer.nodeName === '#text' && isSameContainer) {
+    //         startSpan = document.createElement('span')
+    //         startSpan.className = 'select_start select_end'
+    //         startSpan.textContent = startContainer.textContent
+    //         startContainer.replaceWith(startSpan)
+    //         endSpan = startSpan
+    //     } else {
+    //         // 判断左边界
+    //         if (startContainer.nodeName === '#text') {
+    //             startSpan = document.createElement('span')
+    //             startSpan.className = 'select_start'
+    //             startSpan.textContent = startContainer.textContent
+    //             startContainer.replaceWith(startSpan)
+    //         } else {
+    //             // 认为左边界在img左侧
+    //             let leftImg = startContainer.childNodes[startOffset] as Element
+    //             startSpan = document.createElement('span')
+    //             startSpan.className = 'select_start'
+    //             startSpan.appendChild(createNodeByStr(leftImg.outerHTML) as Node)
+    //             leftImg.replaceWith(startSpan)
+    //             // 如果右边界在这个img右侧， 注意：是同一个img
+    //             if (endContainer.nodeName !== '#text' && isSameContainer && ((endOffset - startOffset) === 1)) {
+    //                 startSpan.className += ' select_end'
+    //                 richText.value = container.value!.innerHTML
+    //                 return
+    //             }
+    //         }
+    //         // 判断右边界
+    //         if (endContainer.nodeName === '#text') {
+    //             endSpan = document.createElement('span')
+    //             endSpan.className = 'select_end'
+    //             endSpan.textContent = endContainer.textContent
+    //             endContainer.replaceWith(endSpan)
+    //         } else {
+    //             if (endOffset) {
+    //                 // 右边界在img右侧
+    //                 let rightImg = endContainer.childNodes[endOffset - 1] as Element
+    //                 endSpan = document.createElement('span')
+    //                 endSpan.className = 'select_end'
+    //                 endSpan.appendChild(createNodeByStr(rightImg.outerHTML) as Node)
+    //                 rightImg.replaceWith(endSpan)
+    //             } else {
+    //                 // 右边界在新一行的开头, 则建一个空的span.select_end插入开头
+    //                 endSpan = document.createElement('span')
+    //                 endSpan.className = 'select_end'
+    //                 endContainer.insertBefore(endSpan, endContainer.firstChild || null)
+    //             }
+    //         }
+    //     }
+    //     // fix: 这里操作dom后要同步数据的变化
+    //     richText.value = container.value!.innerHTML
+    // }
+
     function tagDomRange() {
         if (!range.value) return
         const { collapsed, startContainer, endContainer, startOffset, endOffset } = range.value ?? {}
@@ -90,62 +149,31 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
         // 保存startOffset, endOffset，因为后面会对选区进行操作，导致这两个值置0
         tempStartOffset = startOffset
         tempEndOffset = endOffset
-        let startSpan = null,
-            endSpan = null
         let isSameContainer = (startContainer === endContainer);
-
-        // 如果两侧边界都是text
-        if (startContainer.nodeName === '#text' && endContainer.nodeName === '#text' && isSameContainer) {
-            startSpan = document.createElement('span')
-            startSpan.className = 'select_start select_end'
-            startSpan.textContent = startContainer.textContent
-            startContainer.replaceWith(startSpan)
-            endSpan = startSpan
+        // 判断左边界
+        if (startContainer.nodeName === '#text') {
+            setAttrByNode(startContainer, 'select_start')
         } else {
-            // 判断左边界
-            if (startContainer.nodeName === '#text') {
-                startSpan = document.createElement('span')
-                startSpan.className = 'select_start'
-                startSpan.textContent = startContainer.textContent
-                startContainer.replaceWith(startSpan)
-            } else {
-                // 认为左边界在img左侧
-                let leftImg = startContainer.childNodes[startOffset] as Element
-                startSpan = document.createElement('span')
-                startSpan.className = 'select_start'
-                startSpan.appendChild(createNodeByStr(leftImg.outerHTML) as Node)
-                leftImg.replaceWith(startSpan)
-                // 如果右边界在这个img右侧， 注意：是同一个img
-                if (endContainer.nodeName !== '#text' && isSameContainer && ((endOffset - startOffset) === 1)) {
-                    startSpan.className += ' select_end'
-                    richText.value = container.value!.innerHTML
-                    return
-                }
-            }
-            // 判断右边界
-            if (endContainer.nodeName === '#text') {
-                endSpan = document.createElement('span')
-                endSpan.className = 'select_end'
-                endSpan.textContent = endContainer.textContent
-                endContainer.replaceWith(endSpan)
-            } else {
-                if (endOffset) {
-                    // 右边界在img右侧
-                    let rightImg = endContainer.childNodes[endOffset - 1] as Element
-                    endSpan = document.createElement('span')
-                    endSpan.className = 'select_end'
-                    endSpan.appendChild(createNodeByStr(rightImg.outerHTML) as Node)
-                    rightImg.replaceWith(endSpan)
-                } else {
-                    // 右边界在新一行的开头, 则建一个空的span.select_end插入开头
-                    endSpan = document.createElement('span')
-                    endSpan.className = 'select_end'
-                    endContainer.insertBefore(endSpan, endContainer.firstChild || null)
-                }
+            // 认为左边界在img左侧
+            setAttrByNode(startContainer.childNodes[startOffset] as HTMLElement, 'select_start')
+            // 如果右边界在这个img右侧， 注意：是同一个img
+            if (endContainer.nodeName !== '#text' && isSameContainer && ((endOffset - startOffset) === 1)) {
+                setAttrByNode(endContainer.childNodes[startOffset] as HTMLElement, 'select_end')
+                richText.value = container.value!.innerHTML
+                return
             }
         }
-        // fix: 这里操作dom后要同步数据的变化
-        richText.value = container.value!.innerHTML
+        // 判断右边界
+        if (endContainer.nodeName === '#text') {
+            setAttrByNode(endContainer, 'select_end')
+        } else {
+            if (endOffset) {
+                // 右边界在img右侧
+                setAttrByNode(endContainer.childNodes[endOffset - 1] as HTMLElement, 'select_end')
+            } else {
+                setAttrByNode(endContainer as HTMLElement, 'select_end')
+            }
+        }
     }
 
     // 更新选区的文本内容给样式（根据选区的起止节点和类名，更新选区的文本内容）
@@ -154,10 +182,8 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
     // 2. span.select_start和span.select_end 内只能包含文本节点
     let tree = null as unknown as JSONContent // todo 放里面
     async function updateStrByClassName(className: string = 'underline') {
-        debugger
         if (!range.value || !container.value) return
-        let ans = await HTMLParser(container.value.outerHTML)
-        tree = (<JSONContent>ans.content[1]).content[0] as JSONContent
+        let tree = await HTMLParser(container.value)
         const { dfs } = useDFS(tempStartOffset, tempEndOffset, className)
         dfs(tree)
         bfs(tree)
@@ -168,6 +194,7 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
         richText.value = str.slice(l, r)
         return richText.value
     }
+
 
     return {
         length,

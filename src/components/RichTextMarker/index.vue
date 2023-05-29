@@ -6,8 +6,9 @@
 <script lang="ts" setup>
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import useRichTextMarker from './useRichTextMarker.js'
-import Toolbar, { TextType } from './Toolbar/index.ts'
+import Toolbar, { Config } from './Toolbar/index.ts'
 import './Toolbar/index.less'
+import { initTree } from './useAst'
 
 const props = defineProps<{
     modelValue: string
@@ -15,6 +16,10 @@ const props = defineProps<{
 const emits = defineEmits<{
     (event: 'update:modelValue', value: string): void
 }>()
+
+// const _modelValue = computed(async () => await initTree(props.modelValue))
+const _modelValue = ref(props.modelValue)
+
 
 // 用于出错重置
 const initialValue = props.modelValue
@@ -29,22 +34,20 @@ const handleMouseUp = async () => {
     console.log('mouseup')
     try {
         await handleSelectionChange()
-        // 标记后拿到最新的html字符串给父组件，后续让父组件更新modelValue，自己通过watch监听modelValue更新，执行后续操作（恢复选区）
-        emits('update:modelValue', richTextMarkerRef.value!.innerHTML)
         // 弹出工具栏
         await new Promise(resolve => setTimeout(resolve, 0)) // fix: 等待原生dom操作结束
         try {
             let textTypeName = await Toolbar.show(markerContainerRef.value!, {
                 style: getToolbarPosition(),
-                config: [TextType.UNDERLINE, TextType.NOTE]
+                config: [Config.m_underline, Config.m_note]
             })
             console.log(textTypeName)
-            switch(textTypeName) {
-                case TextType.UNDERLINE:
-                    await updateStrByClassName('underline')
+            switch (textTypeName) {
+                case Config.m_underline:
+                    await updateStrByClassName('m_underline')
                     break
-                case TextType.NOTE:
-                    await updateStrByClassName('note')
+                case Config.m_note:
+                    await updateStrByClassName('m_note')
                     break
             }
             // 等待工具栏操作
@@ -56,9 +59,10 @@ const handleMouseUp = async () => {
             reset()
             Toolbar.close()
         }
-    } catch (error) {
+    } catch (error: any) {
         console.log(error)
         // 微任务队列尾部执行reset（为了等待emit后各种的副作用）
+        if (error.message?.includes('warning')) return
         Promise.resolve().then(() => { reset() })
     }
 }
@@ -66,13 +70,14 @@ const handleMouseUp = async () => {
 // 初始化hooks中的richText
 setRichText(props.modelValue)
 watch(() => props.modelValue, async () => {
-    // props.modelValue变化 --> 触发v-html --> dom重新渲染（异步） --> 丢失选区，所以要恢复之前的选区
-    await nextTick() // 这里等待dom更新后设置选区
-    try {
-        // recoverRange()
-    } catch (error) {
-        reset()
-    }
+    _modelValue.value = await initTree(props.modelValue)
+    // // props.modelValue变化 --> 触发v-html --> dom重新渲染（异步） --> 丢失选区，所以要恢复之前的选区
+    // await nextTick() // 这里等待dom更新后设置选区
+    // try {
+    //     // recoverRange()
+    // } catch (error) {
+    //     reset()
+    // }
 }, { immediate: true })
 
 
@@ -103,8 +108,9 @@ img {
     height: 20px;
 }
 
-.underline {
+.m_underline {
     border-bottom: 2px solid blue;
+    cursor: pointer;
 }
 </style>
 
