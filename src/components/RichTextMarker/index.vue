@@ -17,18 +17,14 @@ const emits = defineEmits<{
     (event: 'update:modelValue', value: string): void
 }>()
 
-// const _modelValue = computed(async () => await initTree(props.modelValue))
-const _modelValue = ref(props.modelValue)
-
-
 // 用于出错重置
-const initialValue = props.modelValue
+let initialValue = props.modelValue
 function reset() {
     emits('update:modelValue', initialValue)
 }
 
 const richTextMarkerRef = ref<HTMLDivElement | null>(null)
-const { handleSelectionChange, setRichText, recoverRange, rect, richText, range, updateStrByClassName } = useRichTextMarker(richTextMarkerRef)
+const { handleSelectionChange, setRichText, recoverRange, rect, richText, range, updateStrByClassName, hasStatusByRange } = useRichTextMarker(richTextMarkerRef)
 
 const handleMouseUp = async () => {
     console.log('mouseup')
@@ -37,10 +33,8 @@ const handleMouseUp = async () => {
         // 弹出工具栏
         await new Promise(resolve => setTimeout(resolve, 0)) // fix: 等待原生dom操作结束
         try {
-            let textTypeName = await Toolbar.show(markerContainerRef.value!, {
-                style: getToolbarPosition(),
-                config: [Config.m_underline, Config.m_note]
-            })
+            let config = [Config.m_underline, Config.m_note]
+            let textTypeName = await Toolbar.show(markerContainerRef.value!, { style: getToolbarPosition(), config })
             console.log(textTypeName)
             switch (textTypeName) {
                 case Config.m_underline:
@@ -48,6 +42,9 @@ const handleMouseUp = async () => {
                     break
                 case Config.m_note:
                     await updateStrByClassName('m_note')
+                    break
+                case Config.d_underline:
+                    await updateStrByClassName('d_underline')
                     break
             }
             // 等待工具栏操作
@@ -69,8 +66,8 @@ const handleMouseUp = async () => {
 
 // 初始化hooks中的richText
 setRichText(props.modelValue)
-watch(() => props.modelValue, async () => {
-    _modelValue.value = await initTree(props.modelValue)
+watch(() => props.modelValue, async (v) => {
+    initialValue = v
     // // props.modelValue变化 --> 触发v-html --> dom重新渲染（异步） --> 丢失选区，所以要恢复之前的选区
     // await nextTick() // 这里等待dom更新后设置选区
     // try {
@@ -111,6 +108,10 @@ img {
 .m_underline {
     border-bottom: 2px solid blue;
     cursor: pointer;
+}
+
+.m_note {
+    background-color: red;
 }
 </style>
 

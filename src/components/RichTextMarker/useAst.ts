@@ -1,5 +1,5 @@
 import { HTMLParser, JSONToHTML, JSONContent, DataSetString } from './parser'
-import { hasAttrByNode, hasStatusByNode, addStatusByNode } from './domUtils'
+import { hasAttrByNode, hasStatusByNode, addStatusByNode, addStatusByNodeLeftIndex, addStatusByNodeRightIndex, addStatusByNodeLeftAndRightIndex } from './domUtils'
 export default function useDFS(tempStartOffset: number, tempEndOffset: number, className: string = 'underline') {
     function refreshContentIndex(content: JSONContent[]) {
         content.forEach((item, index) => item.index = index)
@@ -14,56 +14,67 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
         if (hasAttrByNode(root, 'select_start', 'select_end')) {
             // 选区属于同一节点（都是文字、都是图片）
             let parent = root.parent
-            if (type === 'text') {
-                if (parent.attributes?.class?.includes(className)) return // 重复状态
-                const sentence = root.content
-                const prefix = sentence.slice(0, tempStartOffset)
-                const selected = sentence.slice(tempStartOffset, tempEndOffset)
-                const suffix = sentence.slice(tempEndOffset)
-                // 插入状态节点
-                spanWrapper = {
-                    type: 'span',
-                    attributes: { class: className },
-                    content: [{
-                        type: 'text',
-                        content: selected,
-                        parent: null as any,
-                        index: 0
-                    }],
-                    parent,
-                    index
-                }
-                spanWrapper.content[0].parent = spanWrapper
-                parent.content[index] = spanWrapper
+            if (parent.type !== 'span') {
+                if (type === 'text') {
+                    if (parent.attributes?.class?.includes(className)) return // 重复状态
+                    const sentence = root.content
+                    const prefix = sentence.slice(0, tempStartOffset)
+                    const selected = sentence.slice(tempStartOffset, tempEndOffset)
+                    const suffix = sentence.slice(tempEndOffset)
+                    // 插入状态节点
+                    spanWrapper = {
+                        type: 'span',
+                        attributes: { class: className },
+                        content: [{
+                            type: 'text',
+                            content: selected,
+                            parent: null as any,
+                            index: 0
+                        }],
+                        parent,
+                        index
+                    }
+                    spanWrapper.content[0].parent = spanWrapper
+                    parent.content[index] = spanWrapper
 
-                if (tempStartOffset) {
-                    parent.content.splice(index, 0, {
-                        type: 'text',
-                        content: prefix,
-                        parent,
-                        index
-                    })
+                    if (tempStartOffset) {
+                        parent.content.splice(index, 0, {
+                            type: 'text',
+                            content: prefix,
+                            parent,
+                            index
+                        })
+                    }
+                    if (tempEndOffset < sentence.length) {
+                        parent.content.splice(index + (tempStartOffset ? 2 : 1), 0, {
+                            type: 'text',
+                            content: suffix,
+                            parent,
+                            index
+                        })
+                    }
+                } else if (type === 'img') {
+                    spanWrapper = {
+                        type: 'span',
+                        attributes: { class: className },
+                        index,
+                        content: [root],
+                        parent
+                    }
+                    root.parent = spanWrapper
+                    parent.content[index] = spanWrapper
+                } else {
+                    throw new Error('unexpected case')
                 }
-                if (tempEndOffset < sentence.length) {
-                    parent.content.splice(index + (tempStartOffset ? 2 : 1), 0, {
-                        type: 'text',
-                        content: suffix,
-                        parent,
-                        index
-                    })
-                }
-            } else if (type === 'img') {
-                spanWrapper = {
-                    type: 'span',
-                    attributes: { class: className },
-                    index,
-                    content: [root],
-                    parent
-                }
-                root.parent = spanWrapper
-                parent.content[index] = spanWrapper
             } else {
-                throw new Error('unexpected case')
+                // 如果有状态span节点
+
+                if (parent.attributes?.class.includes(className)) {
+                    // 如果该状态节点已有该状态，则不做处理
+                } else {
+                    // 否则添加新的状态
+                    addStatusByNodeLeftAndRightIndex(parent, className, tempStartOffset, tempEndOffset)
+                }
             }
             refreshContentIndex(parent.content)
             return
@@ -112,10 +123,13 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
                 }
                 refreshContentIndex(parent.content)
             } else {
+                // 如果有状态span节点
+
                 if (parent.attributes?.class.includes(className)) {
-                    // 不做处理
+                    // 如果该状态节点已有该状态，则不做处理
                 } else {
-                    throw new Error('unexpected case')
+                    // 否则添加新的状态
+                    addStatusByNodeLeftIndex(parent, className, tempStartOffset)
                 }
             }
             lock = true
@@ -162,10 +176,13 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
                     parent.content.splice(index, 1, spanWrapper)
                 }
             } else {
+                // 如果有状态span节点
+
                 if (parent.attributes?.class.includes(className)) {
-                    // 不做处理
+                    // 如果该状态节点已有该状态，则不做处理
                 } else {
-                    throw new Error('unexpected case')
+                    // 否则添加新的状态
+                    addStatusByNodeRightIndex(parent, className, tempEndOffset)
                 }
             }
             lock = false

@@ -1,6 +1,7 @@
 import { HTMLAttributes } from "vue"
 export enum Config {
-  'm_underline' = '画线',
+  'm_underline' = '划线',
+  'd_underline' = '取消划线', // delete
   'm_note' = '批注',
 }
 
@@ -8,7 +9,7 @@ type ConfigKey = keyof typeof Config
 
 export interface Options {
   style: HTMLAttributes['style'],
-  config: Config[]
+  config?: Config[]
 }
 
 class Toolbar {
@@ -21,17 +22,9 @@ class Toolbar {
     this.toolbarElement.classList.add("rich_text_marker__toolbar")
     this.toolbarElement.style.display = "none"
   }
-
-  private setEventListener(): void {
-    Object.keys(Config).forEach((key) => {
-      this.toolbarElement.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement
-        if (target.classList.contains('rich_text_marker__toolbar__item')) {
-          // resolve(target.innerText as Config)
-        }
-      })
-    })
-  }
+  // 设置被标注的文本的事件监听器
+  // private setEventListener(): void {
+  // }
 
   public static getInstance(): Toolbar {
     if (!Toolbar.instance) {
@@ -52,12 +45,12 @@ class Toolbar {
 
   private handleOutsideClickWrapper: null | ((event: MouseEvent) => void) = null
 
-  public show(parentEle: HTMLElement, options: Options): Promise<Config> {
+  public show(parentEle: HTMLElement, { style, config = [Config.m_underline, Config.m_note] }: Options): Promise<Config> {
     this.toolbarElement.style.display = "block"
     // 设置工具条位置
-    Object.assign(this.toolbarElement.style, options.style)
+    Object.assign(this.toolbarElement.style, style)
     // 设置工具条选项
-    this.toolbarElement.innerHTML = options.config.reduce((prev, curr) => {
+    this.toolbarElement.innerHTML = config.reduce((prev, curr) => {
       return prev + `<span class="rich_text_marker__toolbar__item">${curr}</span>`
     }, '')
     parentEle.appendChild(this.toolbarElement)
