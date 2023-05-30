@@ -8,7 +8,7 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 import useRichTextMarker from './useRichTextMarker.js'
 import Toolbar, { Config } from './Toolbar/index.ts'
 import './Toolbar/index.less'
-import { initTree } from './useAst'
+import { clearCustomAttributes } from './domUtils.js'
 
 const props = defineProps<{
     modelValue: string
@@ -20,11 +20,12 @@ const emits = defineEmits<{
 // 用于出错重置
 let initialValue = props.modelValue
 function reset() {
+    console.log('reset')
     emits('update:modelValue', initialValue)
 }
 
 const richTextMarkerRef = ref<HTMLDivElement | null>(null)
-const { handleSelectionChange, setRichText, recoverRange, rect, richText, range, updateStrByClassName, hasStatusByRange } = useRichTextMarker(richTextMarkerRef)
+const { handleSelectionChange, setRichText, rect, richText, updateStrByClassName, hasStatus } = useRichTextMarker(richTextMarkerRef)
 
 const handleMouseUp = async () => {
     console.log('mouseup')
@@ -34,6 +35,13 @@ const handleMouseUp = async () => {
         await new Promise(resolve => setTimeout(resolve, 0)) // fix: 等待原生dom操作结束
         try {
             let config = [Config.m_underline, Config.m_note]
+
+            let hasUnderline = await hasStatus('m_underline')
+            console.log('hasUnderline:', hasUnderline)
+            if (hasUnderline) {
+                // 如果值为true说明选区内有划线， 添加删除划线的选项
+                config.splice(1, 0, Config.d_underline)
+            }
             let textTypeName = await Toolbar.show(markerContainerRef.value!, { style: getToolbarPosition(), config })
             console.log(textTypeName)
             switch (textTypeName) {
@@ -53,13 +61,13 @@ const handleMouseUp = async () => {
         } catch (error) {
             console.log(error)
             console.log('取消')
-            reset()
+            clearCustomAttributes(markerContainerRef.value!)
             Toolbar.close()
         }
     } catch (error: any) {
         console.log(error)
         // 微任务队列尾部执行reset（为了等待emit后各种的副作用）
-        if (error.message?.includes('warning')) return
+        if (error.message?.includes('warning')) return clearCustomAttributes(markerContainerRef.value!)
         Promise.resolve().then(() => { reset() })
     }
 }
@@ -68,13 +76,7 @@ const handleMouseUp = async () => {
 setRichText(props.modelValue)
 watch(() => props.modelValue, async (v) => {
     initialValue = v
-    // // props.modelValue变化 --> 触发v-html --> dom重新渲染（异步） --> 丢失选区，所以要恢复之前的选区
-    // await nextTick() // 这里等待dom更新后设置选区
-    // try {
-    //     // recoverRange()
-    // } catch (error) {
-    //     reset()
-    // }
+    console.log('传入新值：', v)
 }, { immediate: true })
 
 

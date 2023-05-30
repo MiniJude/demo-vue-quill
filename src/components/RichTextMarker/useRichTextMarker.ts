@@ -1,7 +1,7 @@
 import { computed, nextTick, ref, Ref } from 'vue'
 import { type JSONContent, HTMLParser, JSONToHTML } from './parser'
 import useDFS, { bfs } from './useAst'
-import { createNodeByStr, getAttrIdByNode, setAttrByNode } from './domUtils'
+import { createNodeByStr, getAttrIdByNode, hasAttrByNode, setAttrByNode } from './domUtils'
 export default function useRichTextMarker(container: Ref<Element | null>) {
 
     const selection = ref<Selection | null>()
@@ -113,30 +113,94 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
     // 定义规则：
     // 1. 状态文字全用span包裹
     // 2. span.m-select_start和span.m-select_end 内只能包含文本节点？
-    async function updateStrByClassName(className: string = 'underline') {
+    async function updateStrByClassName(className: string = 'm_underline') {
         if (!range.value || !container.value) return
         let tree = await HTMLParser(container.value)
-        const { dfs } = useDFS(tempStartOffset, tempEndOffset, className)
-        dfs(tree)
+        const { addStatus, deleteStatus } = useDFS(tempStartOffset, tempEndOffset, className)
+        if (className.startsWith('m_')) {
+            addStatus(tree)
+        } else if (className.startsWith('d_')) {
+            deleteStatus(tree)
+        }
         bfs(tree)
         let str = await JSONToHTML(tree) as string
         // 去掉父节点
         let l = str.indexOf('>') + 1
         let r = str.lastIndexOf('<')
         richText.value = str.slice(l, r)
-        return richText.value
     }
 
     // 判单选区内是否有某一类名的节点
-    function hasStatusByRange(className: string) {
-        if (!range.value) return false
-        // 获取范围内的所有节点
-        var nodes = range.value.cloneContents().querySelectorAll('*');
-        // 遍历节点，判断是否有 class 包含 m_underline 的节点
-        for (var i = 0, node; node = nodes[i++];) {
-            if (node.closest('.' + className)) {
-                return true
+    async function hasStatus(className: string) {
+        if (!range.value || !container.value) return
+        let tree = await HTMLParser(container.value)
+        let lock = true
+        const fn = (root: any) => {
+            if (!root) return
+            let type = root.type
+            if (hasAttrByNode(root, 'select_start', 'select_end')) {
+                // 选区属于同一节点（都是文字、都是图片）
+                let parent = root.parent
+                if (parent.type !== 'span') {
+                    // 如果父节点不是span节点，说明其没有任何状态
+                } else {
+                    // 如果有状态span节点
+
+                    if (parent.attributes?.class.includes(className)) {
+                        // 如果该状态节点已有该状态， 通过抛出异常的方式来中断整棵树的遍历
+                        console.log('找到了')
+                        throw new Error('找到了')
+                    } else { }
+                }
+                return
             }
+
+            if (hasAttrByNode(root, 'select_start')) {
+                let parent = root.parent
+                if (parent.type !== 'span') {
+                } else {
+                    // 如果有状态span节点
+
+                    if (parent.attributes?.class.includes(className)) {
+                        console.log('找到了')
+                        throw new Error('找到了')
+                    } else { }
+                }
+                lock = true
+            } else if (hasAttrByNode(root, 'select_end')) {
+                let parent = root.parent
+                if (parent.type !== 'span') {
+                } else {
+                    // 如果有状态span节点
+
+                    if (parent.attributes?.class.includes(className)) {
+                        console.log('找到了')
+                        throw new Error('找到了')
+                    } else {
+                    }
+                }
+                lock = false
+            } else if ((type === 'text' || type === 'img' || root.attributes?.class?.includes('ql-formula')) && !lock) {
+                let parent = root.parent
+                // 选区中间的节点（既不是开头也不是结尾）
+
+                if (parent.type !== 'span') {
+                } else {
+                    console.log('找到了')
+                    throw new Error('找到了')
+                }
+            }
+            if (root.content.length && root.type !== 'text') {
+                if (root.attributes?.class?.includes('ql-formula')) return //  如果是公式的节点，不遍历其子节点
+                for (let i = root.content.length - 1, child: JSONContent; child = root.content[i--];) {
+                    fn(child)
+                }
+            }
+        }
+        try {
+            fn(tree)
+        } catch (error: any) {
+            if (error.message === '找到了') return true
         }
         return false
     }
@@ -152,6 +216,6 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
         setRichText,
         recoverRange,
         updateStrByClassName,
-        hasStatusByRange
+        hasStatus
     }
 }

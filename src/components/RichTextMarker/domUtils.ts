@@ -21,7 +21,7 @@ export function getAttrIdByNode(node: HTMLElement): string {
     return m?.slice(2)!
 }
 
-// 给给定dom元素添加自定义属性
+// 给给定dom节点添加自定义属性
 export function setAttrByNode(node: any, ...args: string[]) {
     args.forEach(key => {
         if (node instanceof HTMLElement) {
@@ -33,12 +33,33 @@ export function setAttrByNode(node: any, ...args: string[]) {
     })
 }
 
-// 判断某个dom元素是否有某些自定义属性
+// 判断某个dom节点是否有某些自定义属性
 export function hasAttrByNode(node: any, ...args: string[]) {
     return args.every(key => Object.keys(node.attributes ?? {}).includes(('data-' + key)))
 }
 
-// 判断某个dom元素是否已有状态标注
+// 清除某个dom节点（包括其子节点）的自定义属性（data-select_start  data-select_end）
+export function clearCustomAttributes(node: any) {
+    if (!node) {
+        return;
+    }
+
+    // 清除自定义属性
+    if (node.attributes && (node.attributes.hasOwnProperty('data-select_start') || node.attributes.hasOwnProperty('data-select_end'))) {
+        delete node.attributes['data-select_start'];
+        delete node.attributes['data-select_end'];
+    }
+
+    // 递归清除子节点的自定义属性
+    if (node.childNodes) {
+        for (let i = 0; i < node.childNodes.length; i++) {
+            clearCustomAttributes(node.childNodes[i]);
+        }
+    }
+}
+
+
+// 判断某个dom节点是否已有状态标注
 export function hasStatusByNode(node: any, ...args: string[]) {
     if (!node.attributes) return false
     if (args.length) {
@@ -68,7 +89,6 @@ export function addStatusByNodeLeftIndex(node: any, status: string, l: number) {
     let oldTextObj = node.content[0]
     let suffix = oldTextObj.content.slice(l)
     oldTextObj.content = oldTextObj.content.slice(0, l)
-    copyNode(node, suffix, status)
     node.parent.content.splice(node.index + 1, 0, copyNode(node, suffix, status))
 }
 export function addStatusByNodeRightIndex(node: any, status: string, r: number) {
@@ -76,7 +96,6 @@ export function addStatusByNodeRightIndex(node: any, status: string, r: number) 
     let oldTextObj = node.content[0]
     let prefix = oldTextObj.content.slice(0, r)
     oldTextObj.content = oldTextObj.content.slice(r)
-    copyNode(node, prefix, status)
     node.parent.content.splice(node.index, 0, copyNode(node, prefix, status))
 }
 export function addStatusByNodeLeftAndRightIndex(node: any, status: string, l: number, r: number) {
@@ -85,7 +104,6 @@ export function addStatusByNodeLeftAndRightIndex(node: any, status: string, l: n
     let prefix = oldTextObj.content.slice(0, l),
         suffix = oldTextObj.content.slice(r),
         middle = oldTextObj.content.slice(l, r)
-    // oldTextObj.content = oldTextObj.content.slice(l, r)
     if (suffix) node.parent.content.splice(node.index + 1, 0, copyNode(node, suffix))
     if (middle) node.parent.content.splice(node.index, 1, copyNode(node, middle, status))
     if (prefix) node.parent.content.splice(node.index, 0, copyNode(node, prefix))
@@ -103,4 +121,73 @@ function copyNode(node: any, text: string, status?: string) {
     }]
     if (status) newNode.attributes.class += ` ${status}`
     return newNode
+}
+
+export function deleteStatusByNode(node: any, status: string) {
+    let text = node.content[0].content
+    node.parent.content.splice(node.index, 1, reduceNode(node, text, status))
+}
+
+export function deleteStatusByNodeLeftIndex(node: any, status: string, l: number) {
+    // 暂认为能走到这个函数，一定是需要一分为二的
+    let oldTextObj = node.content[0]
+    let suffix = oldTextObj.content.slice(l)
+    oldTextObj.content = oldTextObj.content.slice(0, l)
+    node.parent.content.splice(node.index + 1, 0, reduceNode(node, suffix, status))
+
+}
+export function deleteStatusByNodeRightIndex(node: any, status: string, r: number) {
+    // 暂认为能走到这个函数，一定是需要一分为二的
+    let oldTextObj = node.content[0]
+    let prefix = oldTextObj.content.slice(0, r)
+    oldTextObj.content = oldTextObj.content.slice(r)
+    node.parent.content.splice(node.index, 0, reduceNode(node, prefix, status))
+}
+export function deleteStatusByNodeLeftAndRightIndex(node: any, status: string, l: number, r: number) {
+    // 暂认为能走到这个函数，一定是需要一分为三的
+    let oldTextObj = node.content[0]
+    let prefix = oldTextObj.content.slice(0, l),
+        suffix = oldTextObj.content.slice(r),
+        middle = oldTextObj.content.slice(l, r)
+    if (suffix) node.parent.content.splice(node.index + 1, 0, reduceNode(node, suffix))
+    if (middle) node.parent.content.splice(node.index, 1, reduceNode(node, middle, status))
+    if (prefix) node.parent.content.splice(node.index, 0, reduceNode(node, prefix))
+}
+
+function reduceNode(node: any, text: string, status?: string) {
+    let { attributes: { class: oldClass }, ...newNode } = node
+    if (oldClass.split(' ').length === 1) {
+        // 判断oldClass长度如果是1说明这个，说明这个状态就是待删除的状态，删除后要提升节点
+        if (status) {
+            newNode = { ...node.content[0] }
+            newNode.parent = node.parent
+            newNode.content = text
+        } else {
+            if (!status) {
+                newNode.attributes = { class: oldClass }
+                newNode.content[0].content = text
+            }
+        }
+    } else {
+        // 否则只要删除对应状态类名
+        newNode.attributes = {
+            class: oldClass,
+        }
+        newNode.content = [{
+            type: 'text',
+            content: text,
+            parent: newNode,
+        }]
+        if (status) {
+            newNode.attributes.class = removeClass(newNode.attributes.class, status)
+        }
+    }
+
+    return newNode
+}
+
+function removeClass(classString: string, classToRemove: string) {
+    let classArray = classString.split(' ').map(i => i.trim())
+    let filteredArray = classArray.filter((className) => className !== classToRemove.trim())
+    return filteredArray.join(' ')
 }

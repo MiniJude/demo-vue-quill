@@ -1,12 +1,27 @@
 import { HTMLParser, JSONToHTML, JSONContent, DataSetString } from './parser'
-import { hasAttrByNode, hasStatusByNode, addStatusByNode, addStatusByNodeLeftIndex, addStatusByNodeRightIndex, addStatusByNodeLeftAndRightIndex } from './domUtils'
-export default function useDFS(tempStartOffset: number, tempEndOffset: number, className: string = 'underline') {
+import {
+    hasAttrByNode,
+    hasStatusByNode,
+    addStatusByNode,
+    addStatusByNodeLeftIndex,
+    addStatusByNodeRightIndex,
+    addStatusByNodeLeftAndRightIndex,
+    deleteStatusByNode,
+    deleteStatusByNodeLeftIndex,
+    deleteStatusByNodeRightIndex,
+    deleteStatusByNodeLeftAndRightIndex
+} from './domUtils'
+export default function useDFS(tempStartOffset: number, tempEndOffset: number, className: string = 'm_underline') {
+    let targetClassName = ''
+    if (className.startsWith('d_')) targetClassName = className.replace('d_', 'm_')
+
     function refreshContentIndex(content: JSONContent[]) {
         content.forEach((item, index) => item.index = index)
     }
 
     let lock = true
-    const dfs = (root: any) => {
+    // 添加状态
+    const addStatus = (root: any) => {
         if (!root) return
         let index = root.index,
             type = root.type,
@@ -205,20 +220,86 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
                 addStatusByNode(root.parent, className)
             }
         }
-        // JSONToHTML(tree).then(html => console.log(html))
         if (root.content.length && root.type !== 'text') {
             if (root.attributes?.class?.includes('ql-formula')) return //  如果是公式的节点，不遍历其子节点
             if (hasStatusByNode(root)) return
-            // fix: cannot use forEach here, because the length of root.content will change
+            // 倒序遍历，规避子节点向当前节点插入了新的节点导致遍历异常
             for (let i = root.content.length - 1, child: JSONContent; child = root.content[i--];) {
-                dfs(child)
+                addStatus(child)
             }
-            // 给一个p标签尾部新增一个span状态标签，当退出p的text后回来p，这时p已经多了一个节点，导致for循环继续往下走，所以这里尝试用forEach
-            // root.content.forEach(dfs)
+        }
+    }
+
+    function deleteStatus(root: any) {
+        console.log('deleteStatus')
+        if (!root) return
+        let type = root.type
+        if (hasAttrByNode(root, 'select_start', 'select_end')) {
+            // 选区属于同一节点（都是文字、都是图片）
+            let parent = root.parent
+            if (parent.type !== 'span') {
+                // 如果父节点不是span节点，说明其没有任何状态
+            } else {
+                // 如果有状态span节点
+
+                if (parent.attributes?.class.includes(targetClassName)) {
+                    // 如果该状态节点已有该状态，则需要删除该状态
+                    deleteStatusByNodeLeftAndRightIndex(parent, targetClassName, tempStartOffset, tempEndOffset)
+                } else {
+                }
+            }
+            refreshContentIndex(parent.content)
+            return
+        }
+
+        if (hasAttrByNode(root, 'select_start')) {
+            let parent = root.parent
+            if (parent.type !== 'span') {
+            } else {
+                // 如果有状态span节点
+
+                if (parent.attributes?.class.includes(targetClassName)) {
+                    // 如果该状态节点已有该状态，则需要删除该状态
+                    deleteStatusByNodeLeftIndex(parent, targetClassName, tempStartOffset)
+                } else {
+                }
+            }
+            lock = true
+        } else if (hasAttrByNode(root, 'select_end')) {
+            let parent = root.parent
+            if (parent.type !== 'span') {
+            } else {
+                // 如果有状态span节点
+
+                if (parent.attributes?.class.includes(targetClassName)) {
+                    // 如果该状态节点已有该状态，则需要删除该状态
+                    deleteStatusByNodeRightIndex(parent, targetClassName, tempEndOffset)
+                } else {
+                }
+            }
+            lock = false
+        } else if ((type === 'text' || type === 'img' || root.attributes?.class?.includes('ql-formula')) && !lock) {
+            let parent = root.parent
+            // 选区中间的节点（既不是开头也不是结尾）
+
+            if (parent.type !== 'span') {
+            } else {
+                if (parent.attributes?.class.includes(targetClassName)) {
+                    deleteStatusByNode(root.parent, targetClassName)
+                }
+            }
+        }
+        if (root.content.length && root.type !== 'text') {
+            if (root.attributes?.class?.includes('ql-formula')) return //  如果是公式的节点，不遍历其子节点
+            // 倒序遍历，规避子节点向当前节点插入了新的节点导致遍历异常
+            for (let i = root.content.length - 1, child: JSONContent; child = root.content[i--];) {
+                deleteStatus(child)
+            }
         }
     }
     return {
-        dfs
+        addStatus,
+        deleteStatus
     }
 }
 

@@ -9,7 +9,7 @@
   <div>
     <template v-for="item in 6">
       <RichTextMarker v-model="html['case' + item]"></RichTextMarker>
-      <div style="height: 1px;background-color: red;"></div>
+      <div style="height: 4px;background-color: red;"></div>
     </template>
   </div>
 </template>
@@ -18,10 +18,10 @@
 import { reactive } from 'vue'
 import VueQuillEditor from '@/components/VueQuillEditor.vue'
 import RichTextMarker from '@/components/RichTextMarker/index.vue'
-import { HTMLParser } from './components/RichTextMarker/parser';
+import { HTMLParser } from './components/RichTextMarker/parser'
 
 // 建议：公式和图片两侧都加空格！！！！
-let case1 = '<p>这是传入的htmlstr字符串</p><p>这是第二行文字</p>'
+let case1 = '<p>这是<span class="m_underline">传入</span>的htmlstr字符串</p>'
 let case2 = '<p>这是传入的htmlstr字符串</p><p>这是<span class="m_underline">第二行</span>文字</p><p>这是第3行文字</p>'
 let case3 = '<p>这是第二<img src="https://www.antdv.com/assets/logo.1ef800a8.svg">行<img src="https://www.antdv.com/assets/logo.1ef800a8.svg">文字</p>'
 let case4 = '<p>这是传入的htmlstr字符串</p><p>这是第二<img src="https://www.antdv.com/assets/logo.1ef800a8.svg"> 行 <img src="https://www.antdv.com/assets/logo.1ef800a8.svg"> 文字</p><p><img src="https://www.antdv.com/assets/logo.1ef800a8.svg">这是第3行文字</p>'
