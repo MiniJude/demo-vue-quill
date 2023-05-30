@@ -15,6 +15,7 @@ const props = defineProps<{
 }>()
 const emits = defineEmits<{
     (event: 'update:modelValue', value: string): void
+    (event: 'choose', value: Config, callback?: (...arys: any[]) => void): void
 }>()
 
 // 用于出错重置
@@ -43,21 +44,27 @@ const handleMouseUp = async () => {
                 config.splice(1, 0, Config.d_underline)
             }
             let textTypeName = await Toolbar.show(markerContainerRef.value!, { style: getToolbarPosition(), config })
+
+            const map = Object.keys(Config)
+            console.log(map, Config)
+            emits('choose', textTypeName, updateStrByClassName)
             console.log(textTypeName)
             switch (textTypeName) {
                 case Config.m_underline:
                     await updateStrByClassName('m_underline')
                     break
                 case Config.m_note:
-                    await updateStrByClassName('m_note')
+                    // await updateStrByClassName('m_note')
                     break
                 case Config.d_underline:
                     await updateStrByClassName('d_underline')
                     break
             }
             // 等待工具栏操作
-            emits('update:modelValue', richText.value)
-            Toolbar.close()
+            setTimeout(() => {
+                emits('update:modelValue', richText.value)
+                Toolbar.close()
+            }, 1000);
         } catch (error) {
             console.log(error)
             console.log('取消')
