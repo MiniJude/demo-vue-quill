@@ -2,7 +2,7 @@ import { HTMLAttributes } from "vue"
 export enum Config {
   'm_underline' = '划线',
   'd_underline' = '取消划线', // delete
-  'm_note' = '批注',
+  'm_comment' = '批注',
 }
 
 type ConfigKey = keyof typeof Config
@@ -45,7 +45,7 @@ class Toolbar {
 
   private handleOutsideClickWrapper: null | ((event: MouseEvent) => void) = null
 
-  public show(parentEle: HTMLElement, { style, config = [Config.m_underline, Config.m_note] }: Options): Promise<Config> {
+  public show(parentEle: HTMLElement, { style, config = [Config.m_underline, Config.m_comment] }: Options): Promise<Config> {
     this.toolbarElement.style.display = "block"
     // 设置工具条位置
     Object.assign(this.toolbarElement.style, style)

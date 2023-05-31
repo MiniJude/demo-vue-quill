@@ -1,7 +1,7 @@
 import { computed, nextTick, ref, Ref } from 'vue'
 import { type JSONContent, HTMLParser, JSONToHTML } from './parser'
 import useDFS, { bfs } from './useAst'
-import { createNodeByStr, getAttrIdByNode, hasAttrByNode, setAttrByNode } from './domUtils'
+import { hasAttrByNode, setAttrByNode } from './domUtils'
 export default function useRichTextMarker(container: Ref<Element | null>) {
 
     const selection = ref<Selection | null>()

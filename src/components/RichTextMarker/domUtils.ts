@@ -1,3 +1,9 @@
+// import 
+
+import { HTMLParser, JSONToHTML } from "./parser"
+import { bfs } from './useAst'
+
+
 // 使用DOMParser根据html字符串生成node节点
 export function createNodeByStr(str: string) {
     const parser = new DOMParser()
@@ -14,11 +20,42 @@ export function clearNodeByEvent(event: MouseEvent, className: string) {
     parent.replaceWith(node)
 }
 
-// 拿到给定节点的属性的data-m-id 中的id
-export function getAttrIdByNode(node: HTMLElement): string {
-    const data = node.dataset
-    const m = Object.keys(data).find(key => key.startsWith('m'))
-    return m?.slice(2)!
+export function uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0,
+            v = c == 'x' ? r : (r & 0x3 | 0x8)
+        return v.toString(16)
+    })
+}
+
+// 获取className字符串中的m-comment-ids
+export function getCommentIdsByClassName(className: string): string[] {
+    let prefix = 'm_comment-id-'
+    let classList = className.split(' ')
+    let ids: string[] = classList.filter(item => {
+        return item.startsWith(prefix)
+    }).map(item => {
+        return item.trim()
+    })
+    return ids
+}
+
+// 获取给定节点的comment-id集合
+export function getCommentIdsByNode(node: HTMLElement): string[] {
+    let ans: string[] = []
+    const findCommentIds = (node: HTMLElement) => {
+        let ids = getCommentIdsByClassName(node.className)
+        if (ids.length) {
+            ans.push(...ids)
+            return
+        }
+        if (node.parentElement?.tagName === 'P') return
+        if (node.parentElement) {
+            findCommentIds(node.parentElement)
+        }
+    }
+    findCommentIds(node)
+    return ans
 }
 
 // 给给定dom节点添加自定义属性
@@ -190,4 +227,33 @@ function removeClass(classString: string, classToRemove: string) {
     let classArray = classString.split(' ').map(i => i.trim())
     let filteredArray = classArray.filter((className) => className !== classToRemove.trim())
     return filteredArray.join(' ')
+}
+
+// 删除node中指定的class，如果删除后没有状态，则需要提升子节点
+export async function removeClassByKey(node: HTMLElement, classToRemove: string) {
+    let tree = await HTMLParser(node)
+    console.log(tree);
+    const fn = (root: any) => {
+        // 广度优先遍历
+        if (!root || !root.content?.length) return
+        const queue = [root]
+        while (queue.length) {
+            const currentNode = queue.shift()!
+            if (currentNode.type === 'span' && currentNode.attributes?.class?.includes(classToRemove)) {
+                deleteStatusByNode(currentNode, classToRemove)
+            }
+            if (currentNode.type === 'text' || currentNode.attributes?.class?.includes('ql-formula')) {
+                continue
+            } else if (currentNode.content?.length) {
+                queue.push(...currentNode.content)
+            }
+        }
+    }
+    fn(tree)
+    bfs(tree)
+    let str = await JSONToHTML(tree) as string
+    // 去掉父节点
+    let l = str.indexOf('>') + 1
+    let r = str.lastIndexOf('<')
+    return str.slice(l, r)
 }

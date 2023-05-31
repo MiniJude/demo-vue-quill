@@ -8,13 +8,16 @@
   </div> -->
   <div style="display: flex;width: 100%;height: 100%;">
     <div style="flex:1;height: 100%;overflow: auto;padding: 20px;">
-      <RichTextMarker v-model="html['case1']" @choose="handleChoose" :noteFn="123"></RichTextMarker>
+      <RichTextMarker @commentChange="handleComment" ref="richTextMarkerRef" v-model="html['case2']"></RichTextMarker>
     </div>
     <div style="width:2px;background-color: rosybrown;"> </div>
     <div style="flex:1;height: 100%;overflow: auto;padding: 20px;">
-      123
+      <p v-for="item in list">
+        <span>{{ item.key }}</span>
+        ----------------
+        <span>{{ item.value }}</span>
+      </p>
     </div>
-    <textarea class="custom-textarea" v-if="textareaVisible"></textarea>
   </div>
 </template>
 
@@ -43,61 +46,12 @@ const html = reactive<Record<string, string>>({
 //   console.log(res)
 // })
 
-function handleChoose(textTypeName: any, callback?: (...arys: any[]) => void) {
-  console.log(textTypeName, callback)
-  callback?.('m_note')
+const richTextMarkerRef = ref<InstanceType<typeof RichTextMarker>>()
+const list = ref<{ key: string, value: string }[]>([])
+function handleComment(allComments: { key: string, value: string }[]) {
+  list.value = allComments
 }
-
-
-const textareaVisible = ref(false)
-function createNote() {
-
-}
-
 
 </script>
 
-<style lang="less" scoped>
-// 自定义textarea样式
-// 定义textarea样式
-.custom-textarea {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  // 背景色
-  background-color: #f5f5f5;
-  
-  // 边框
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  
-  // 内边距
-  padding: 8px;
-  
-  // 字体
-  font-family: Arial, sans-serif;
-  font-size: 14px;
-  
-  // 调整尺寸
-  width: 300px;
-  height: 150px;
-  
-  // 调整其他样式
-  resize: vertical; // 允许垂直调整大小
-  box-sizing: border-box; // 盒子模型为边框盒模型，便于计算尺寸
-  outline: none; // 去除默认的焦点边框
-  
-  // 鼠标悬停效果
-  &:hover {
-    background-color: #ebebeb;
-  }
-  
-  // 聚焦效果
-  &:focus {
-    border-color: #6c9ce8;
-    box-shadow: 0 0 4px #6c9ce8;
-  }
-}
-
-</style>
+<style lang="less" scoped></style>

@@ -9,7 +9,8 @@ import {
     deleteStatusByNode,
     deleteStatusByNodeLeftIndex,
     deleteStatusByNodeRightIndex,
-    deleteStatusByNodeLeftAndRightIndex
+    deleteStatusByNodeLeftAndRightIndex,
+    uuid
 } from './domUtils'
 export default function useDFS(tempStartOffset: number, tempEndOffset: number, className: string = 'm_underline') {
     let targetClassName = ''
@@ -316,7 +317,7 @@ function isSameClass(class1: string, class2: string) {
 }
 
 // 双指针合并同一层节点（span）的状态类名
-function mergeAttributes(nodes: JSONContent[]) {
+export function mergeAttributes(nodes: JSONContent[]) {
     let l = 0, r = 1
     if (nodes.length < 2) return
     while (r < nodes.length) {
@@ -345,14 +346,6 @@ export function bfs(root: JSONContent) {
             queue.push(...node.content)
         }
     }
-}
-
-function uuid() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        var r = Math.random() * 16 | 0,
-            v = c == 'x' ? r : (r & 0x3 | 0x8)
-        return v.toString(16)
-    })
 }
 
 // 用data-m-xxxb标记每个节点
