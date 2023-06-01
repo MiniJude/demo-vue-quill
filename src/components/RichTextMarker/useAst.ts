@@ -332,12 +332,15 @@ export function mergeAttributes(nodes: JSONContent[]) {
     }
 }
 
-// 广度优先遍历（合并同一层节点的状态）
+// 广度优先遍历（合并同一层节点的状态）&& 同时删除自定义属性
 export function bfs(root: JSONContent) {
     if (!root || !root.content?.length) return
     const queue: JSONContent[] = [root]
     while (queue.length) {
         const node = queue.shift()!
+        // 删除自定义属性
+        delete node.attributes?.['data-select_start']
+        delete node.attributes?.['data-select_end']
         if (node.type === 'text' || node.attributes?.class?.includes('ql-formula')) {
             continue
         } else if (node.content?.length) {

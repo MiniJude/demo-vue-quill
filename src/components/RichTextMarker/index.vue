@@ -13,7 +13,7 @@ import { nextTick, ref } from 'vue'
 import useRichTextMarker from './useRichTextMarker.ts'
 import Toolbar, { Config } from './Toolbar/index.ts'
 import './Toolbar/index.less'
-import { clearCustomAttributes, uuid, getCommentIdsByNode, removeClassByKey } from './domUtils.ts'
+import { uuid, getCommentIdsByNode, removeClassByKey, clearCustomAttributes } from './domUtils.ts'
 import useRecords from './useRecords.ts'
 
 const props = defineProps<{
@@ -21,7 +21,6 @@ const props = defineProps<{
 }>()
 const emits = defineEmits<{
     (event: 'update:modelValue', value: string): void
-    (event: 'choose', value: Config, callback?: (...arys: any[]) => void): void
     (event: 'commentChange', value: Comment[]): void
 }>()
 
@@ -58,7 +57,6 @@ const handleMouseUp = async () => {
                 config.splice(1, 0, Config.d_underline)
             }
             let textTypeName = await Toolbar.show(markerContainerRef.value!, { style: getToolbarPosition(), config })
-            emits('choose', textTypeName, updateStrByClassName)
             console.log(textTypeName)
             switch (textTypeName) {
                 case Config.m_underline:
@@ -85,15 +83,15 @@ const handleMouseUp = async () => {
             addRecord(richText.value)
             Toolbar.close()
         } catch (error) {
-            console.log(error)
-            console.log('取消')
-            clearCustomAttributes(markerContainerRef.value!)
+            console.log('取消：', error)
+            // 如果取消，纯操作dom来清空自定义标记属性
+            clearCustomAttributes(richTextMarkerRef.value)
             Toolbar.close()
         }
     } catch (error: any) {
         console.log(error)
         // 无效选区，则清空自定义属性
-        if (error.message?.includes('warning')) return clearCustomAttributes(markerContainerRef.value!)
+        if (error.message?.includes('warning')) return
         // 微任务队列尾部执行undo（为了等待emit后各种的副作用）
         Promise.resolve().then(() => {
             emits('update:modelValue', undo())

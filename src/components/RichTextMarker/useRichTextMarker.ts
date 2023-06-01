@@ -17,26 +17,6 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
         richText.value = str
     }
 
-    function recoverRange() {
-        console.log('recoverRange')
-        // 重新设置选区（dom的更改之后，可能会造成选区会丢失或者偏移，在此先移除所有range，再加入一个正确的选区）
-        // fix: 因为是全新的dom，所以不能拿之前的span节点来设置选区，否则会报domcument内没有：addRange(): The given range isn't in document.
-        let newRange = document.createRange()
-        let startSpan = container.value?.querySelector('.select_start'),
-            endSpan = container.value?.querySelector('.select_end')
-        if (!startSpan || !endSpan) return
-        newRange.setStart(startSpan.firstChild!, tempStartOffset)
-        newRange.setEnd(endSpan.firstChild!, tempEndOffset)
-        selection.value = window.getSelection()
-        selection.value?.removeAllRanges()
-        selection.value!.addRange(newRange)
-        // rect.value = selection.value?.getRangeAt(0)!.getBoundingClientRect() ?? null
-        nextTick(() => {
-            tempStartOffset = 0
-            tempEndOffset = 0
-        })
-    }
-
     // 选区变化处理函数
     async function handleSelectionChange() {
         if (!container.value) throw new Error('warning: container is null')
@@ -46,6 +26,8 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
         if (!isValid) throw new Error('warning: selection is invalid') // TODO：这里要清空用于标记选区的自定义属性
         // 在dom上标记选区
         tagDomRange()
+        // 同步设置richText
+
     }
 
     // 校验选区合法性（判断选中内容是否全部属于某个组件节点，如果不是则清空选中内容）
@@ -214,7 +196,6 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
         handleSelectionChange,
         richText,
         setRichText,
-        recoverRange,
         updateStrByClassName,
         hasStatus
     }

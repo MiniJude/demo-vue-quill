@@ -1,6 +1,6 @@
 import { HTMLAttributes } from "vue"
 
-export type DataSetString = `data-${string}` 
+export type DataSetString = `data-${string}`
 
 export interface JSONContent {
     type: string
@@ -55,13 +55,17 @@ export async function HTMLParser(element: Element | string): Promise<JSONContent
                         }
                     }
                 }
-                if (element.attributes !== null) {
-                    if (element.attributes.length) {
-                        object.attributes = {};
-                        for (let i = 0; i < element.attributes.length; i++) {
-                            object.attributes[element.attributes[i].nodeName] = element.attributes[i].nodeValue;
-                        }
+                if (element.attributes?.length) {
+                    object.attributes = {};
+                    for (let i = 0; i < element.attributes.length; i++) {
+                        object.attributes[element.attributes[i].nodeName] = element.attributes[i].nodeValue;
                     }
+                }
+                if (element.attributes?.hasOwnProperty('data-select_start')) {
+                    object.attributes['data-select_start'] = ''
+                }
+                if (element.attributes?.hasOwnProperty('data-select_end')) {
+                    object.attributes['data-select_end'] = ''
                 }
             };
 
@@ -102,7 +106,7 @@ export async function JSONToHTML(
 
                 // If there is content, process it and add it to the tag
                 if (content.content) {
-                    if(Array.isArray(content.content)) {
+                    if (Array.isArray(content.content)) {
                         content.content.forEach((node) => {
                             if (node.type === 'text') {
                                 html += node.content;

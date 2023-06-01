@@ -22,14 +22,10 @@ class Toolbar {
     this.toolbarElement.classList.add("rich_text_marker__toolbar")
     this.toolbarElement.style.display = "none"
   }
-  // 设置被标注的文本的事件监听器
-  // private setEventListener(): void {
-  // }
 
   public static getInstance(): Toolbar {
     if (!Toolbar.instance) {
       Toolbar.instance = new Toolbar()
-      // document.addEventListener()
     }
     return Toolbar.instance
   }

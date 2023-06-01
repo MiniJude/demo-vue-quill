@@ -61,10 +61,9 @@ export function getCommentIdsByNode(node: HTMLElement): string[] {
 // 给给定dom节点添加自定义属性
 export function setAttrByNode(node: any, ...args: string[]) {
     args.forEach(key => {
-        if (node instanceof HTMLElement) {
-            node.dataset[key] = ''
+        if (!node.attributes) {
+            node.attributes = { [`data-${key}`]: '' }
         } else {
-            if (!node.attributes) node.attributes = {}
             node.attributes[`data-${key}`] = ''
         }
     })
@@ -77,21 +76,28 @@ export function hasAttrByNode(node: any, ...args: string[]) {
 
 // 清除某个dom节点（包括其子节点）的自定义属性（data-select_start  data-select_end）
 export function clearCustomAttributes(node: any) {
-    if (!node) {
-        return;
-    }
-
-    // 清除自定义属性
-    if (node.attributes && (node.attributes.hasOwnProperty('data-select_start') || node.attributes.hasOwnProperty('data-select_end'))) {
-        delete node.attributes['data-select_start'];
-        delete node.attributes['data-select_end'];
-    }
-
-    // 递归清除子节点的自定义属性
-    if (node.childNodes) {
-        for (let i = 0; i < node.childNodes.length; i++) {
-            clearCustomAttributes(node.childNodes[i]);
+    try {
+        if (!node) {
+            return;
         }
+        // 清除自定义属性
+        if (node.attributes?.hasOwnProperty('data-select_start')) {
+            delete node.attributes['data-select_start']
+        }
+
+        if (node.attributes?.hasOwnProperty('data-select_end')) {
+            delete node.attributes['data-select_end']
+        }
+
+        // 递归清除子节点的自定义属性
+        if (node.childNodes?.length) {
+            for (let i = 0, childNode = null; childNode = node.childNodes[i++];) {
+                if (childNode?.className?.includes('ql-formula')) continue
+                clearCustomAttributes(childNode);
+            }
+        }
+    } catch (error) {
+        console.log('clearCustomAttributes error', error)
     }
 }
 
