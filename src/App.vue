@@ -28,7 +28,7 @@ import RichTextMarker from '@/components/RichTextMarker/index.vue'
 import { HTMLParser } from './components/RichTextMarker/parser'
 
 // 建议：公式和图片两侧都加空格！！！！
-let case1 = '<p>这是<span class="m_underline">传入</span>的htmlstr字符串</p>'
+let case1 = '<p>这是第<span class="m_comment-id-a0852730-cf8f-46d2-af4e-d297ad2c8f20">二<img src="https://www.antdv.com/assets/logo.1ef800a8.svg"></span>行<img src="https://www.antdv.com/assets/logo.1ef800a8.svg">文字</p>'
 let case2 = '<p>这是传入的htmlstr字符串</p><p>这是<span class="m_underline">第二行</span>文字</p><p>这是第3行文字</p>'
 let case3 = '<p>这是第二<img src="https://www.antdv.com/assets/logo.1ef800a8.svg">行<img src="https://www.antdv.com/assets/logo.1ef800a8.svg">文字</p>'
 let case4 = '<p>这是传入的htmlstr字符串</p><p>这是第二<img src="https://www.antdv.com/assets/logo.1ef800a8.svg"> 行 <img src="https://www.antdv.com/assets/logo.1ef800a8.svg"> 文字</p><p><img src="https://www.antdv.com/assets/logo.1ef800a8.svg">这是第3行文字</p>'

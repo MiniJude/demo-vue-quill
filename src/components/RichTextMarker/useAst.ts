@@ -245,7 +245,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
 
                 if (parent.attributes?.class.includes(targetClassName)) {
                     // 如果该状态节点已有该状态，则需要删除该状态
-                    deleteStatusByNodeLeftAndRightIndex(parent, targetClassName, tempStartOffset, tempEndOffset)
+                    deleteStatusByNodeLeftAndRightIndex(root, targetClassName, tempStartOffset, tempEndOffset)
                 } else {
                 }
             }
@@ -261,7 +261,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
 
                 if (parent.attributes?.class.includes(targetClassName)) {
                     // 如果该状态节点已有该状态，则需要删除该状态
-                    deleteStatusByNodeLeftIndex(parent, targetClassName, tempStartOffset)
+                    deleteStatusByNodeLeftIndex(root, targetClassName, tempStartOffset)
                 } else {
                 }
             }
@@ -274,7 +274,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
 
                 if (parent.attributes?.class.includes(targetClassName)) {
                     // 如果该状态节点已有该状态，则需要删除该状态
-                    deleteStatusByNodeRightIndex(parent, targetClassName, tempEndOffset)
+                    deleteStatusByNodeRightIndex(root, targetClassName, tempEndOffset)
                 } else {
                 }
             }
@@ -286,7 +286,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
             if (parent.type !== 'span') {
             } else {
                 if (parent.attributes?.class.includes(targetClassName)) {
-                    deleteStatusByNode(root.parent, targetClassName)
+                    deleteStatusByNode(root, targetClassName)
                 }
             }
         }
