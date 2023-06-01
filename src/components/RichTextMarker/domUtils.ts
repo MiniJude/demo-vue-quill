@@ -176,7 +176,11 @@ export function deleteStatusByNode(node: any, status: string) {
         grandParent = parent.parent
     if (isOnlyOneClass(parent)) {
         // 如果父级只有一个状态标注，则提升
-        grandParent.content.splice(parent.index, 1, node)
+        grandParent.content.splice(parent.index + 1, 0, node)
+        parent.content.splice(node.index, 1)
+        if (parent.content.length === 0) {
+            grandParent.content.splice(parent.index, 1)
+        }
     } else {
         // 否则删除父级的该状态标注
         parent.attributes.class = removeClass(parent.attributes.class, status)
@@ -191,8 +195,24 @@ export function deleteStatusByNodeLeftAndRightIndex(node: any, status: string, l
     if (node.type === 'img') {
         // 如果是图片则直接提升，或减父级状态（看父级类名个数）
         if (isOnlyOneClass(parent)) {
-            // 如果父级只有一个状态标注，则提升
+            if (node.index !== parent.content.length - 1) {
+                let suffixSpan = {
+                    type: 'span',
+                    attributes: parent.attributes,
+                    content: parent.content.slice(node.index + 1)
+                }
+                grandParent.content.splice(parent.index + 1, 0, suffixSpan)
+            }
             grandParent.content.splice(parent.index, 1, node)
+            if (node.index !== 0) {
+                let suffixSpan = {
+                    type: 'span',
+                    attributes: parent.attributes,
+                    content: parent.content.slice(0, node.index)
+                }
+                grandParent.content.splice(parent.index, 0, suffixSpan)
+            }
+
         } else {
             // 否则删除父级的该状态标注
             parent.attributes.class = removeClass(parent.attributes.class, status)
@@ -203,18 +223,58 @@ export function deleteStatusByNodeLeftAndRightIndex(node: any, status: string, l
         let prefix = text.slice(0, l),
             suffix = text.slice(r),
             middle = text.slice(l, r)
-        if (suffix) grandParent.content.splice(parent.index + 1, 0, generateSpanNode(suffix, className))
-        if (middle) {
-            if (isOnlyOneClass(parent)) {
-                grandParent.content.splice(parent.index, 1, {
-                    type: 'text',
-                    content: middle
-                })
-            } else {
-                grandParent.content.splice(parent.index, 1, generateSpanNode(middle, removeClass(className, status)))
+        // if (suffix) {
+        //     parent.content.splice(node.index + 1, 0, { type: 'text', content: suffix })
+        //     // grandParent.content.splice(parent.index + 1, 0, generateSingleSonSpanNode(suffix, className))
+        // }
+        // if (middle) {
+        //     if (isOnlyOneClass(parent)) {
+        //         grandParent.content.splice(parent.index, 0, {
+        //             type: 'text',
+        //             content: middle
+        //         })
+
+        //     } else {
+        //         grandParent.content.splice(parent.index, 1, generateSingleSonSpanNode(middle, removeClass(className, status)))
+        //     }
+        // }
+        // if (prefix) {
+        //     if (isOnlyOneClass(parent)) {
+        //         grandParent.content.splice(parent.index, 0, generateSingleSonSpanNode(prefix, className))
+        //     }
+        // }
+        // parent.content.splice(node.index, 1)
+        let suffixSpanContent = parent.content.splice(node.index + 1)
+        if (suffix) suffixSpanContent.unshift({ type: 'text', content: suffix })
+
+        let prefixSpanContent = parent.content.splice(0, node.index)
+        if (prefix) prefixSpanContent.push({ type: 'text', content: prefix })
+
+        let mid;
+        if (isOnlyOneClass(parent)) {
+            mid = {
+                type: 'text',
+                content: middle,
+            }
+        } else {
+            mid = {
+                type: 'span',
+                attributes: { class: removeClass(className, status) },
+                content: [{ type: 'text', content: middle }]
             }
         }
-        if (prefix) grandParent.content.splice(parent.index, 0, generateSpanNode(prefix, className))
+        grandParent.content.splice(parent.index, 1, {
+            type: 'span',
+            attributes: { class: className },
+            content: prefixSpanContent
+        }, mid, {
+            type: 'span',
+            attributes: { class: className },
+            content: suffixSpanContent
+        })
+        // parent.content.splice(node.index, 1)
+        // grandParent.content.splice(parent.index, 1)
+
     }
     // todo：公式暂未考虑
 }
@@ -233,7 +293,6 @@ export function deleteStatusByNodeLeftIndex(node: any, status: string, l: number
         grandParent = parent.parent,
         className = parent.attributes.class
     // 如果是img则直接提升，或减父级状态（看父级类名个数）
-
     if (node.type === 'img') {
         if (isOnlyOneClass(parent)) {
             // 如果父级只有一个状态标注且图片在最左边，则提升
@@ -256,20 +315,21 @@ export function deleteStatusByNodeLeftIndex(node: any, status: string, l: number
             // parent.attributes.class = removeClass(parent.attributes.class, status)
         }
     } else if (node.type === 'text') {
-        // 如果是文字可能会一份为二（看起始点）
+        // 如果是文字可能会一分为二（看起始点）
         let text = node.content
         let prefix = text.slice(0, l),
             suffix = text.slice(l)
-        if (suffix) grandParent.content.splice(parent.index + 1, 0, generateSpanNode(suffix, className))
-        if (prefix) {
+        if (suffix) {
             if (isOnlyOneClass(parent)) {
-                grandParent.content.splice(parent.index, 1, {
-                    type: 'text',
-                    content: prefix
-                })
+                grandParent.content.splice(parent.index + 1, 0, { type: 'text', content: suffix })
             } else {
-                grandParent.content.splice(parent.index, 1, generateSpanNode(prefix, removeClass(className, status)))
+                grandParent.content.splice(parent.index, 0, generateSingleSonSpanNode(suffix, removeClass(className, status)))
             }
+        }
+        if (prefix) {
+            node.content = prefix
+        } else {
+            parent.content.splice(node.index, 1)
         }
     }
     // todo：公式暂未考虑
@@ -293,15 +353,16 @@ export function deleteStatusByNodeRightIndex(node: any, status: string, r: numbe
 
     if (node.type === 'img') {
         if (isOnlyOneClass(parent)) {
-            // 如果父级只有一个状态标注且图片在最右边，则提升
-            if (node.index === parent.content.length - 1) {
-                grandParent.content.splice(parent.index, 1, node)
-            } else {
-                // 从父级中移除该节点
-                parent.content.splice(node.index, 1)
-                // 向祖父级插入该节点
-                grandParent.content.splice(parent.index + 1, 0, node)
-            }
+            let suffixSpanContent = parent.content.splice(node.index + 1)
+            grandParent.content.splice(parent.index + 1, 0, {
+                type: 'span',
+                attributes: { class: className },
+                content: suffixSpanContent
+            })
+            grandParent.content.splice(parent.index + 1, 0, node)
+
+            parent.content.splice(node.index, 1)
+
         } else {
             // 如果父级有多个状态标注
             if (node.index === parent.content.length - 1) {
@@ -317,35 +378,50 @@ export function deleteStatusByNodeRightIndex(node: any, status: string, r: numbe
         let text = node.content
         let prefix = text.slice(0, r),
             suffix = text.slice(r)
-        if (suffix) grandParent.content.splice(parent.index + 1, 0, generateSpanNode(suffix, className))
-        if (prefix) {
-            if (isOnlyOneClass(parent)) {
-                // 如果文字在parent的最左边
-                if (node.index === 0) {
-                    grandParent.content.splice(parent.index, 1, {
-                        type: 'text',
-                        content: prefix
-                    })
-                } else {
-                    // 从父级中移除该节点
-                    parent.content.splice(node.index, 1)
-                    // 向祖父级插入该节点
-                    grandParent.content.splice(parent.index + 1, 0, {
-                        type: 'text',
-                        content: prefix
-                    })
-                }
-            } else {
-                grandParent.content.splice(parent.index, 1, generateSpanNode(prefix, removeClass(className, status)))
-            }
+        if (isOnlyOneClass(parent)) {
+            let suffixSpanContent = parent.content.splice(node.index + 1)
+            if (suffix) suffixSpanContent.unshift({ type: 'text', content: suffix })
+            grandParent.content.splice(parent.index + 1, 0, {
+                type: 'text',
+                content: prefix
+            }, {
+                type: 'span',
+                attributes: { class: className },
+                content: suffixSpanContent
+            })
+            parent.content.splice(node.index, 1)
+        } else {
+            grandParent.content.splice(parent.index + 1, 0, generateSingleSonSpanNode(suffix, className))
         }
+        // if (prefix) {
+        //     if (isOnlyOneClass(parent)) {
+        //         // 如果文字在parent的最左边
+        //         if (node.index === 0) {
+        //             grandParent.content.splice(parent.index, 0, {
+        //                 type: 'text',
+        //                 content: prefix
+        //             })
+        //             parent.content.splice(node.index, 1)
+        //         } else {
+        //             // 从父级中移除该节点
+        //             parent.content.splice(node.index, 1)
+        //             // 向祖父级插入该节点
+        //             grandParent.content.splice(parent.index + 1, 0, {
+        //                 type: 'text',
+        //                 content: prefix
+        //             })
+        //         }
+        //     } else {
+        //         grandParent.content.splice(parent.index, 1, generateSingleSonSpanNode(prefix, removeClass(className, status)))
+        //     }
+        // }
     }
     // todo：公式暂未考虑
 }
 
 
 // 生成新的包裹文本或者图片的span状态节点
-function generateSpanNode(content: any, className: string) {
+function generateSingleSonSpanNode(content: any, className: string) {
     return {
         type: 'span',
         attributes: {
