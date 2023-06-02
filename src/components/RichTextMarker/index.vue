@@ -2,10 +2,6 @@
     <div ref="markerContainerRef" class="rich_text_marker">
         <div ref="richTextMarkerRef" v-html="modelValue" @mousedown="handleMouseDown" @mouseup="handleMouseUp"
             @click="handleClick"></div>
-        <div class="textareaWrapper" v-if="commentForm.length">
-            <textarea v-for="(item, index) in commentForm" v-model="item.value" ref="textAreaRef" class="custom-textarea"
-                @keydown.enter.prevent="submitComment(index)"></textarea>
-        </div>
     </div>
 </template>
 <script lang="ts" setup>
@@ -13,7 +9,7 @@ import { nextTick, ref } from 'vue'
 import useRichTextMarker from './useRichTextMarker.ts'
 import Toolbar, { Config } from './Toolbar/index.ts'
 import './Toolbar/index.less'
-import { uuid, getCommentIdsByNode, removeClassByKey, clearCustomAttributes } from './domUtils.ts'
+import { uuid, getCommentIdsByNode, getHtmlStrByNeedRemovedKey, clearCustomAttributes } from './domUtils.ts'
 import useRecords from './useRecords.ts'
 
 const props = defineProps<{
@@ -22,6 +18,7 @@ const props = defineProps<{
 const emits = defineEmits<{
     (event: 'update:modelValue', value: string): void
     (event: 'commentChange', value: Comment[]): void
+    (event: 'takeComment', value: Comment): void
 }>()
 
 
@@ -66,13 +63,8 @@ const handleMouseUp = async () => {
                     // 生成唯一comment-id-xxx,
                     let key = 'm_comment-id-' + uuid()
                     await updateStrByClassName(key)
-                    commentForm.value.push({
-                        key,
-                        value: ''
-                    })
                     await nextTick()
-                    textAreaRef.value[textAreaRef.value.length - 1].focus()
-                    // await updateStrByClassName('m_comment')
+                    emits('takeComment', { key, value: '' })
                     break
                 case Config.d_underline:
                     await updateStrByClassName('d_underline')
@@ -129,7 +121,6 @@ type Comment = {
 const allComments = ref<Comment[]>([])
 
 // 批注输入框
-const textAreaRef = ref<HTMLTextAreaElement[]>([])
 const commentForm = ref<{ key: string; value: string }[]>([]) // 批注表单
 async function submitComment(index: number) {
     let currentComment = commentForm.value[index]
@@ -137,7 +128,7 @@ async function submitComment(index: number) {
     if (comment) {
         if (!currentComment.value) {
             // 删除
-            let newStr = await removeClassByKey(richTextMarkerRef.value!, comment.key)
+            let newStr = await getHtmlStrByNeedRemovedKey(richTextMarkerRef.value!, comment.key)
             addRecord(newStr) // 新增一条操作记录
             emits('update:modelValue', newStr)
             let index = allComments.value.indexOf(comment)
@@ -174,7 +165,7 @@ function handleClick(e: Event) {
 }
 
 defineExpose({
-    allComments
+    getHtmlStrByNeedRemovedKey
 })
 
 
@@ -208,43 +199,5 @@ img {
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
-}
-
-// 自定义textarea样式
-// 定义textarea样式
-.custom-textarea {
-    // 背景色
-    background-color: #f5f5f5;
-
-    // 边框
-    border: 1px solid #ccc;
-    border-radius: 4px;
-
-    // 内边距
-    padding: 8px;
-
-    // 字体
-    font-family: Arial, sans-serif;
-    font-size: 14px;
-
-    // 调整尺寸
-    width: 300px;
-    height: 150px;
-
-    // 调整其他样式
-    resize: vertical; // 允许垂直调整大小
-    box-sizing: border-box; // 盒子模型为边框盒模型，便于计算尺寸
-    outline: none; // 去除默认的焦点边框
-
-    // 鼠标悬停效果
-    &:hover {
-        background-color: #ebebeb;
-    }
-
-    // 聚焦效果
-    &:focus {
-        border-color: #6c9ce8;
-        box-shadow: 0 0 4px #6c9ce8;
-    }
 }
 </style>

@@ -474,7 +474,7 @@ function removeClass(classString: string, classToRemove: string) {
 }
 
 // 删除node中指定的class，如果删除后没有状态，则需要提升子节点
-export async function removeClassByKey(node: HTMLElement, classToRemove: string) {
+export async function getHtmlStrByNeedRemovedKey(node: HTMLElement, classToRemove: string) {
     let tree = await HTMLParser(node)
     console.log(tree);
     const fn = (root: any) => {
