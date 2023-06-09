@@ -164,14 +164,9 @@ function handleClick(e: Event) {
     commentForm.value = allComments.value.filter(item => ans.includes(item.key))
 }
 
-defineExpose({
-    getHtmlStrByNeedRemovedKey
-})
-
-
 </script>
 <style lang="less">
-img {
+.rich_text_marker img {
     width: 20px;
     height: 20px;
 }

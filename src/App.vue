@@ -1,5 +1,7 @@
 <template>
-  <!-- <VueQuillEditor v-model:content="html"></VueQuillEditor> -->
+  <div>
+    <VueQuillEditor v-model:content="html.case1" v-model:text="text"></VueQuillEditor>
+  </div>
   <!-- <div>
     <template v-for="item in 6">
       <RichTextMarker v-model="html['case' + item]"></RichTextMarker>
@@ -28,8 +30,10 @@ import VueQuillEditor from '@/components/VueQuillEditor.vue'
 import RichTextMarker from '@/components/RichTextMarker/index.vue'
 import { HTMLParser } from './components/RichTextMarker/parser'
 
+const text = ref('')
+
 // 建议：公式和图片两侧都加空格！！！！
-let case1 = '<p>这是第一文行字</p><p>this is the second line</p>'
+let case1 = '<p>这是第一文行字</p><p><br></p><p>this is the second line</p>'
 let case2 = '<p>这是传入的htmlstr字符串</p><p>这是<span class="m_underline">第二行</span>文字</p><p>这是第3行文字</p>'
 let case3 = '<p>这是第二<img src="https://www.antdv.com/assets/logo.1ef800a8.svg">行<img src="https://www.antdv.com/assets/logo.1ef800a8.svg">文字</p>'
 let case4 = '<p>这是传入的htmlstr字符串</p><p>这是第二<img src="https://www.antdv.com/assets/logo.1ef800a8.svg"> 行 <img src="https://www.antdv.com/assets/logo.1ef800a8.svg"> 文字</p><p><img src="https://www.antdv.com/assets/logo.1ef800a8.svg">这是第3行文字</p>'
@@ -41,7 +45,7 @@ const html = reactive<Record<string, string>>({
   case3,
   case4,
   case5,
-  case6,
+  case6
 })
 // HTMLParser(case1).then(res => {
 //   console.log(res)

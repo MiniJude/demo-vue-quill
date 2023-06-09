@@ -42,7 +42,7 @@ class Toolbar {
   private handleOutsideClickWrapper: null | ((event: MouseEvent) => void) = null
 
   public show(parentEle: HTMLElement, { style, config = [Config.m_underline, Config.m_comment] }: Options): Promise<Config> {
-    this.toolbarElement.style.display = "block"
+    this.toolbarElement.style.display = "flex"
     // 设置工具条位置
     Object.assign(this.toolbarElement.style, style)
     // 设置工具条选项

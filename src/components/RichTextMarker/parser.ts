@@ -62,19 +62,31 @@ export async function HTMLParser(element: Element | string): Promise<JSONContent
                     }
                 }
                 if (element.attributes?.hasOwnProperty('data-select_start')) {
-                    object.attributes['data-select_start'] = ''
+                    try {
+                        object.attributes['data-select_start'] = ''
+                    } catch (error) {
+                        throw new Error('该节点理论上不应该有data-select_start属性')
+                    }
                 }
                 if (element.attributes?.hasOwnProperty('data-select_end')) {
-                    object.attributes['data-select_end'] = ''
+                    try {
+                        object.attributes['data-select_end'] = ''
+                    } catch (error) {
+                        throw new Error('该节点理论上不应该有data-select_end属性')
+                    }
                 }
             };
 
             // @ts-expect-error
             treeHTML(elementToParse);
-
-            resolve(treeObject);
+            if (typeof element === 'string') {
+                resolve(treeObject.content[1]);
+            } else {
+                resolve(treeObject);
+            }
         } catch (e) {
             reject(e);
+            console.log(e)
         }
     });
 }
@@ -118,7 +130,7 @@ export async function JSONToHTML(
                 }
 
                 // End the tag
-                html += `</${content.type}>`;
+                if(content.type !== 'br') html += `</${content.type}>`;
 
                 return html;
             };

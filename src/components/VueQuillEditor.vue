@@ -10,13 +10,16 @@ import ImageUploader from 'quill-image-uploader'
 import { blobToDataURI } from '@/utils/common'
 
 const props = withDefaults(defineProps<{
-    content: string
+    content: string,
+    text: string
 }>(), {
-    content: ''
+    content: '',
+    text: ''
 })
 
 const emits = defineEmits<{
     (event: 'update:content', content: string): void
+    (event: 'update:text', content: string): void
 }>()
 
 const editorRef = ref()
@@ -60,6 +63,9 @@ const modules = [{
 const handleTextChange = () => {
     let html = editorRef.value.getHTML()
     emits('update:content', html)
+    let text = editorRef.value.getText()
+    console.log(text);
+    emits('update:text', text)
 }
 
 </script>
