@@ -1,7 +1,7 @@
 import { computed, nextTick, ref, Ref } from 'vue'
 import { type JSONContent, HTMLParser, JSONToHTML } from './parser'
 import useDFS, { bfs } from './useAst'
-import { hasAttrByNode, setAttrByNode } from './domUtils'
+import { hasAttrByNode, setAttrByNode, findFormulaNode } from './domUtils'
 export default function useRichTextMarker(container: Ref<Element | null>) {
 
     const selection = ref<Selection | null>()
@@ -65,8 +65,11 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
         tempStartOffset = startOffset
         tempEndOffset = endOffset
         let isSameContainer = (startContainer === endContainer);
+        let formulaNode = null
         // 判断左边界
-        if (startContainer.nodeName === '#text') {
+        if (formulaNode = findFormulaNode(startContainer)) {
+            setAttrByNode(formulaNode, 'select_start')
+        } else if (startContainer.nodeName === '#text') {
             setAttrByNode(startContainer, 'select_start')
         } else {
             // 认为左边界在img左侧
@@ -79,7 +82,9 @@ export default function useRichTextMarker(container: Ref<Element | null>) {
             }
         }
         // 判断右边界
-        if (endContainer.nodeName === '#text') {
+        if (formulaNode = findFormulaNode(endContainer)) {
+            setAttrByNode(formulaNode, 'select_end')
+        } else if (endContainer.nodeName === '#text') {
             setAttrByNode(endContainer, 'select_end')
         } else {
             if (endOffset) {

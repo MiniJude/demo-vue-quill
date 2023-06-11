@@ -10,7 +10,8 @@ import {
     deleteStatusByNodeLeftIndex,
     deleteStatusByNodeRightIndex,
     deleteStatusByNodeLeftAndRightIndex,
-    uuid
+    uuid,
+    isformulaNode
 } from './domUtils'
 export default function useDFS(tempStartOffset: number, tempEndOffset: number, className: string = 'm_underline') {
     let targetClassName = ''
@@ -69,7 +70,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
                             index
                         })
                     }
-                } else if (type === 'img') {
+                } else if (type === 'img' || isformulaNode(root)) {
                     spanWrapper = {
                         type: 'span',
                         attributes: { class: className },
@@ -126,7 +127,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
                     spanWrapper.content[0].parent = spanWrapper
                     parent.content.splice(index + 1, 0, spanWrapper)
                 } else {
-                    // 包裹图片
+                    // 包裹图片 or 公式i
                     spanWrapper = {
                         type: 'span',
                         attributes: { class: className },
@@ -179,7 +180,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
                     spanWrapper.content[0].parent = spanWrapper
                     parent.content.splice(root.index, 0, spanWrapper)
                     refreshContentIndex(root.parent.content)
-                } else if (root.type === 'img') {
+                } else if (root.type === 'img' || isformulaNode(root)) {
                     // 包裹图片
                     spanWrapper = {
                         type: 'span',
@@ -202,7 +203,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
                 }
             }
             lock = false
-        } else if ((type === 'text' || type === 'img' || root.attributes?.class?.includes('ql-formula')) && !lock) {
+        } else if ((type === 'text' || type === 'img' || isformulaNode(root)) && !lock) {
             let parent = root.parent
             // 选区中间的节点（既不是开头也不是结尾）
 
@@ -222,7 +223,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
             }
         }
         if (root.content.length && root.type !== 'text') {
-            if (root.attributes?.class?.includes('ql-formula')) return //  如果是公式的节点，不遍历其子节点
+            if (isformulaNode(root)) return //  如果是公式的节点，不遍历其子节点
             if (hasStatusByNode(root)) return
             // 倒序遍历，规避子节点向当前节点插入了新的节点导致遍历异常
             for (let i = root.content.length - 1, child: JSONContent; child = root.content[i--];) {
@@ -235,6 +236,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
         console.log('deleteStatus')
         if (!root) return
         let type = root.type
+        debugger
         if (hasAttrByNode(root, 'select_start', 'select_end')) {
             // 选区属于同一节点（都是文字、都是图片）
             let parent = root.parent
@@ -279,7 +281,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
                 }
             }
             lock = false
-        } else if ((type === 'text' || type === 'img' || root.attributes?.class?.includes('ql-formula')) && !lock) {
+        } else if ((type === 'text' || type === 'img' || isformulaNode(root)) && !lock) {
             let parent = root.parent
             // 选区中间的节点（既不是开头也不是结尾）
 
@@ -291,7 +293,7 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
             }
         }
         if (root.content.length && root.type !== 'text') {
-            if (root.attributes?.class?.includes('ql-formula')) return //  如果是公式的节点，不遍历其子节点
+            if (isformulaNode(root)) return //  如果是公式的节点，不遍历其子节点
             // 倒序遍历，规避子节点向当前节点插入了新的节点导致遍历异常
             for (let i = root.content.length - 1, child: JSONContent; child = root.content[i--];) {
                 deleteStatus(child)
@@ -363,7 +365,7 @@ export async function initTree(str: string): Promise<string> {
         if (!hasInit) root.attributes[('data-m-' + uuid()) as DataSetString] = ''
         if (root.content.length) {
             // 如果是公式的节点，不遍历其子节点
-            if (root.attributes?.class?.includes('ql-formula')) return
+            if (isformulaNode(root)) return
             for (let i = 0, child: JSONContent; child = root.content[i++];) {
                 markRoot(child)
             }

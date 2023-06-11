@@ -10,7 +10,7 @@
   </div> -->
   <div style="display: flex;width: 100%;height: 100%;">
     <div style="flex:1;height: 100%;overflow: auto;padding: 20px;">
-      <RichTextMarker @takeComment="handleTakeComment" ref="richTextMarkerRef" v-model="html['case1']"></RichTextMarker>
+      <RichTextMarker @takeComment="handleTakeComment" ref="richTextMarkerRef" v-model="html['case6']"></RichTextMarker>
     </div>
     <div style="width:2px;background-color: rosybrown;"> </div>
     <div style="flex:1;height: 100%;overflow: auto;padding: 20px;">

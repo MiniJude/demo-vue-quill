@@ -1,5 +1,3 @@
-// import 
-
 import { HTMLParser, JSONToHTML } from "./parser"
 import { bfs } from './useAst'
 
@@ -192,7 +190,7 @@ export function deleteStatusByNodeLeftAndRightIndex(node: any, status: string, l
     let parent = node.parent,
         grandParent = parent.parent,
         className = parent.attributes.class
-    if (node.type === 'img') {
+    if (node.type === 'img' || isformulaNode(node)) {
         // 如果是图片则直接提升，或减父级状态（看父级类名个数）
         if (isOnlyOneClass(parent)) {
             if (node.index !== parent.content.length - 1) {
@@ -272,20 +270,9 @@ export function deleteStatusByNodeLeftAndRightIndex(node: any, status: string, l
             attributes: { class: className },
             content: suffixSpanContent
         })
-        // parent.content.splice(node.index, 1)
-        // grandParent.content.splice(parent.index, 1)
-
     }
-    // todo：公式暂未考虑
 }
 
-// export function deleteStatusByNodeLeftIndex(node: any, status: string, l: number) {
-//     // 暂认为能走到这个函数，一定是需要一分为二的
-//     let oldTextObj = node.content[0]
-//     let suffix = oldTextObj.content.slice(l)
-//     oldTextObj.content = oldTextObj.content.slice(0, l)
-//     node.parent.content.splice(node.index + 1, 0, reduceNode(node, suffix, status))
-// }
 export function deleteStatusByNodeLeftIndex(node: any, status: string, l: number) {
     // 暂认为能走到这个函数，一定是需要一分为二的
     // node期望是text或者img，其父级一定有至少一个状态标注
@@ -293,7 +280,7 @@ export function deleteStatusByNodeLeftIndex(node: any, status: string, l: number
         grandParent = parent.parent,
         className = parent.attributes.class
     // 如果是img则直接提升，或减父级状态（看父级类名个数）
-    if (node.type === 'img') {
+    if (node.type === 'img' || isformulaNode(node)) {
         if (isOnlyOneClass(parent)) {
             // 如果父级只有一个状态标注且图片在最左边，则提升
             if (node.index === 0) {
@@ -332,16 +319,7 @@ export function deleteStatusByNodeLeftIndex(node: any, status: string, l: number
             parent.content.splice(node.index, 1)
         }
     }
-    // todo：公式暂未考虑
 }
-
-// export function deleteStatusByNodeRightIndex(node: any, status: string, r: number) {
-//     // 暂认为能走到这个函数，一定是需要一分为二的
-//     let oldTextObj = node.content[0]
-//     let prefix = oldTextObj.content.slice(0, r)
-//     oldTextObj.content = oldTextObj.content.slice(r)
-//     node.parent.content.splice(node.index, 0, reduceNode(node, prefix, status))
-// }
 
 export function deleteStatusByNodeRightIndex(node: any, status: string, r: number) {
     // 暂认为能走到这个函数，一定是需要一分为二的
@@ -351,7 +329,7 @@ export function deleteStatusByNodeRightIndex(node: any, status: string, r: numbe
         className = parent.attributes.class
     // 如果是img则直接提升，或减父级状态（看父级类名个数）
 
-    if (node.type === 'img') {
+    if (node.type === 'img' || isformulaNode(node)) {
         if (isOnlyOneClass(parent)) {
             let suffixSpanContent = parent.content.splice(node.index + 1)
             grandParent.content.splice(parent.index + 1, 0, {
@@ -506,4 +484,33 @@ export async function getHtmlStrByNeedRemovedKey(node: HTMLElement, classToRemov
     let l = str.indexOf('>') + 1
     let r = str.lastIndexOf('<')
     return str.slice(l, r)
+}
+
+// 判断是否是公式节点
+export function isformulaNode(node: any) {
+    return node?.attributes?.class?.includes('ql-formula')
+}
+
+// 查找给定（原生）节点的第一个公式父级节点
+export function findFormulaNode(node: any) {
+    let currentNode = node;
+
+    while (currentNode !== null) {
+        // 检查当前节点是否具有类名 "ql-formula"
+        if (currentNode.classList && currentNode.classList.contains("ql-formula")) {
+            // 找到符合条件的节点
+            return currentNode;
+        }
+
+        // 检查是否遇到类名为 ".rich-text-marker" 的节点
+        if (currentNode.classList && currentNode.classList.contains("rich-text-marker")) {
+            // 停止向上查找，返回 null
+            return null;
+        }
+
+        currentNode = currentNode.parentNode;
+    }
+
+    // 没有找到符合条件的节点
+    return null;
 }
