@@ -236,7 +236,6 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
         console.log('deleteStatus')
         if (!root) return
         let type = root.type
-        debugger
         if (hasAttrByNode(root, 'select_start', 'select_end')) {
             // 选区属于同一节点（都是文字、都是图片）
             let parent = root.parent
