@@ -170,6 +170,9 @@ function isOnlyOneClass(spanNode: any) {
 
 export function deleteStatusByNode(node: any, status: string) {
     // node期望是图片节点/公式节点/文本节点（只存在一种），期望它的父级一定有至少一个状态标注
+    if (node.type === 'text') {
+        node.content = transferStr(node.content)
+    }
     let parent = node.parent,
         grandParent = parent.parent
     if (isOnlyOneClass(parent)) {
@@ -218,9 +221,9 @@ export function deleteStatusByNodeLeftAndRightIndex(node: any, status: string, l
     } else if (node.type === 'text') {
         // 如果是文字可能会一份为三（看起始点）
         let text = node.content
-        let prefix = text.slice(0, l),
-            suffix = text.slice(r),
-            middle = text.slice(l, r)
+        let prefix = transferStr(text.slice(0, l)),
+            suffix = transferStr(text.slice(r)),
+            middle = transferStr(text.slice(l, r))
         // if (suffix) {
         //     parent.content.splice(node.index + 1, 0, { type: 'text', content: suffix })
         //     // grandParent.content.splice(parent.index + 1, 0, generateSingleSonSpanNode(suffix, className))
@@ -304,8 +307,8 @@ export function deleteStatusByNodeLeftIndex(node: any, status: string, l: number
     } else if (node.type === 'text') {
         // 如果是文字可能会一分为二（看起始点）
         let text = node.content
-        let prefix = text.slice(0, l),
-            suffix = text.slice(l)
+        let prefix = transferStr(text.slice(0, l)),
+            suffix = transferStr(text.slice(l))
         if (suffix) {
             if (isOnlyOneClass(parent)) {
                 grandParent.content.splice(parent.index + 1, 0, { type: 'text', content: suffix })
@@ -354,8 +357,8 @@ export function deleteStatusByNodeRightIndex(node: any, status: string, r: numbe
     } else if (node.type === 'text') {
         // 如果是文字可能会一份为二（看起始点）
         let text = node.content
-        let prefix = text.slice(0, r),
-            suffix = text.slice(r)
+        let prefix = transferStr(text.slice(0, r)),
+            suffix = transferStr(text.slice(r))
         if (isOnlyOneClass(parent)) {
             let suffixSpanContent = parent.content.splice(node.index + 1)
             if (suffix) suffixSpanContent.unshift({ type: 'text', content: suffix })
@@ -513,4 +516,19 @@ export function findFormulaNode(node: any) {
 
     // 没有找到符合条件的节点
     return null;
+}
+
+
+// 判断字符串是否为 HTML 字符串
+export function isHTMLString(str: string): boolean {
+    const pattern = /<[a-z][\s\S]*>/i;
+    return pattern.test(str);
+}
+
+// 转义字符串中的 HTML 字符
+export function transferStr (str: string) {
+    return str.replaceAll(/[<]/gi, '&lt;')
+        .replaceAll(/[>]/gi, '&gt;')
+        .replaceAll(/\n/gi, '<br>')
+        .replaceAll(/\s/gi, '&nbsp;')
 }

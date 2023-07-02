@@ -11,7 +11,8 @@ import {
     deleteStatusByNodeRightIndex,
     deleteStatusByNodeLeftAndRightIndex,
     uuid,
-    isformulaNode
+    isformulaNode,
+    transferStr
 } from './domUtils'
 export default function useDFS(tempStartOffset: number, tempEndOffset: number, className: string = 'm_underline') {
     let targetClassName = ''
@@ -35,9 +36,9 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
                 if (type === 'text') {
                     if (parent.attributes?.class?.includes(className)) return // 重复状态
                     const sentence = root.content
-                    const prefix = sentence.slice(0, tempStartOffset)
-                    const selected = sentence.slice(tempStartOffset, tempEndOffset)
-                    const suffix = sentence.slice(tempEndOffset)
+                    const prefix = transferStr(sentence.slice(0, tempStartOffset))
+                    const selected = transferStr(sentence.slice(tempStartOffset, tempEndOffset))
+                    const suffix = transferStr(sentence.slice(tempEndOffset))
                     // 插入状态节点
                     spanWrapper = {
                         type: 'span',
@@ -88,6 +89,9 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
 
                 if (parent.attributes?.class.includes(className)) {
                     // 如果该状态节点已有该状态，则不做处理
+                    if (type === 'text') {
+                        root.content = transferStr(root.content)
+                    }
                 } else {
                     // 否则添加新的状态
                     addStatusByNodeLeftAndRightIndex(parent, className, tempStartOffset, tempEndOffset)
@@ -100,11 +104,11 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
         if (hasAttrByNode(root, 'select_start')) {
             let parent = root.parent
             if (parent.type !== 'span') {
-                if (root.type === 'text') {
+                if (type === 'text') {
                     // 以文本节点为选区起点
                     let text = root.content
-                    let prefix = text.slice(0, tempStartOffset)
-                    let suffix = text.slice(tempStartOffset)
+                    let prefix = transferStr(text.slice(0, tempStartOffset))
+                    let suffix = transferStr(text.slice(tempStartOffset))
                     parent.content[index] = {
                         type: 'text',
                         content: prefix,
@@ -144,6 +148,9 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
 
                 if (parent.attributes?.class.includes(className)) {
                     // 如果该状态节点已有该状态，则不做处理
+                    if (type === 'text') {
+                        root.content = transferStr(root.content)
+                    }
                 } else {
                     // 否则添加新的状态
                     addStatusByNodeLeftIndex(parent, className, tempStartOffset)
@@ -153,11 +160,11 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
         } else if (hasAttrByNode(root, 'select_end')) {
             let parent = root.parent
             if (parent.type !== 'span') {
-                if (root.type === 'text') {
+                if (type === 'text') {
                     // 以文本节点为选区终点
                     let text = root.content
-                    let prefix = text.slice(0, tempEndOffset)
-                    let suffix = text.slice(tempEndOffset)
+                    let prefix = transferStr(text.slice(0, tempEndOffset))
+                    let suffix = transferStr(text.slice(tempEndOffset))
                     parent.content[index] = {
                         type: 'text',
                         content: suffix,
@@ -197,6 +204,9 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
 
                 if (parent.attributes?.class.includes(className)) {
                     // 如果该状态节点已有该状态，则不做处理
+                    if (type === 'text') {
+                        root.content = transferStr(root.content)
+                    }
                 } else {
                     // 否则添加新的状态
                     addStatusByNodeRightIndex(parent, className, tempEndOffset)
@@ -208,6 +218,9 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
             // 选区中间的节点（既不是开头也不是结尾）
 
             if (parent.type !== 'span') {
+                if (type === 'text') {
+                    root.content = transferStr(root.content)
+                }
                 spanWrapper = {
                     type: 'span',
                     attributes: { class: className },
@@ -220,6 +233,10 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
             } else {
                 // 叠加状态
                 addStatusByNode(root.parent, className)
+            }
+        } else {
+            if (type === 'text') {
+                root.content = transferStr(root.content)
             }
         }
         if (root.content.length && root.type !== 'text') {
@@ -257,6 +274,9 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
         if (hasAttrByNode(root, 'select_start')) {
             let parent = root.parent
             if (parent.type !== 'span') {
+                if (type === 'text') {
+                    root.content = transferStr(root.content)
+                }
             } else {
                 // 如果有状态span节点
 
@@ -270,6 +290,9 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
         } else if (hasAttrByNode(root, 'select_end')) {
             let parent = root.parent
             if (parent.type !== 'span') {
+                if (type === 'text') {
+                    root.content = transferStr(root.content)
+                }
             } else {
                 // 如果有状态span节点
 
@@ -285,10 +308,17 @@ export default function useDFS(tempStartOffset: number, tempEndOffset: number, c
             // 选区中间的节点（既不是开头也不是结尾）
 
             if (parent.type !== 'span') {
+                if (type === 'text') {
+                    root.content = transferStr(root.content)
+                }
             } else {
                 if (parent.attributes?.class.includes(targetClassName)) {
                     deleteStatusByNode(root, targetClassName)
                 }
+            }
+        } else {
+            if (type === 'text') {
+                root.content = transferStr(root.content)
             }
         }
         if (root.content.length && root.type !== 'text') {
