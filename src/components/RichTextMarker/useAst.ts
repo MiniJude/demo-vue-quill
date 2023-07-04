@@ -373,6 +373,7 @@ export function bfs(root: JSONContent) {
         delete node.attributes?.['data-select_start']
         delete node.attributes?.['data-select_end']
         if (node.type === 'text' || node.attributes?.class?.includes('ql-formula')) {
+            if(node.type === 'text') node.content = transferStr(node.content) // 转义
             continue
         } else if (node.content?.length) {
             // 合并
