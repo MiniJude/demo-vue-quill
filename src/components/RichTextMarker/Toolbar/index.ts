@@ -2,7 +2,7 @@ import { HTMLAttributes } from "vue"
 export enum Config {
   'm_underline' = '划线',
   'd_underline' = '取消划线', // delete
-  'm_comment' = '批注',
+  'm_comment' = '写批注',
 }
 
 type ConfigKey = keyof typeof Config
@@ -47,15 +47,19 @@ class Toolbar {
     Object.assign(this.toolbarElement.style, style)
     // 设置工具条选项
     this.toolbarElement.innerHTML = config.reduce((prev, curr) => {
-      return prev + `<span class="rich_text_marker__toolbar__item">${curr}</span>`
+      return prev + `<span class="rich_text_marker__toolbar__item">
+        <img src="${new URL(`../img/${curr}.svg`, import.meta.url)}">
+        <span>${curr}</span>
+      </span>`
     }, '')
     parentEle.appendChild(this.toolbarElement)
 
     return new Promise((resolve, reject) => {
       this.toolbarElement.addEventListener('click', (e) => {
         const target = e.target as HTMLElement
-        if (target.classList.contains('rich_text_marker__toolbar__item')) {
-          resolve(target.innerText as Config)
+        let toolbarItem = target.closest('.rich_text_marker__toolbar__item') as HTMLElement
+        if (toolbarItem) {
+          resolve(toolbarItem.innerText as Config)
         }
       })
       // 添加点击事件监听器以处理点击工具条以外的区域

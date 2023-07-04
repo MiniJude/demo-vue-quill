@@ -1,13 +1,8 @@
 <template>
   <div ref="markerContainerRef" class="rich_text_marker">
-    <div
-      ref="richTextMarkerRef"
-      v-html="modelValue"
-      @mousedown="handleMouseDown"
-      @mouseup="handleMouseUp"
-      v-bind="$attrs"
-      @click="handleClick"
-    ></div>
+    <div ref="richTextMarkerRef" v-html="modelValue" @mousedown="handleMouseDown" @mouseup="handleMouseUp"
+      v-bind="$attrs"></div>
+    <img class="clear" title="清空划线和批注" src="./img/重置.png" @click="handleClear" alt="">
   </div>
 </template>
 <script lang="ts" setup>
@@ -15,13 +10,16 @@ import { nextTick, ref } from 'vue'
 import useRichTextMarker from './useRichTextMarker.ts'
 import Toolbar, { Config } from './Toolbar/index.ts'
 import './Toolbar/index.less'
-import {
-  uuid,
-  getCommentIdsByNode,
-  getHtmlStrByNeedRemovedKey,
-  clearCustomAttributes
-} from './domUtils.ts'
+import { uuid, clearCustomAttributes } from './domUtils.ts'
 import useRecords from './useRecords.ts'
+
+
+// 所有的批注数组
+type Comment = {
+  key: string
+  value: string
+  title: string
+}
 
 const props = defineProps<{
   modelValue: string
@@ -30,11 +28,14 @@ const emits = defineEmits<{
   (event: 'update:modelValue', value: string): void
   (event: 'commentChange', value: Comment[]): void
   (event: 'takeComment', value: Comment): void
+  (event: 'clear'): void
 }>()
 
-const { addRecord, undo } = useRecords()
+const { addRecord, undo, records, init } = useRecords()
 
 addRecord(props.modelValue)
+
+
 
 const richTextMarkerRef = ref<HTMLDivElement | null>(null)
 const { handleSelectionChange, setRichText, rect, richText, updateStrByClassName, hasStatus } =
@@ -51,7 +52,6 @@ function handleMouseDown() {
 const handleMouseUp = async () => {
   if (Date.now() - mousedownTimestamp < TIME_DIVIDE) return // 如果时间很短认为是点击事件，直接返回
   console.log('mouseup')
-  if (commentForm.value.length) return // 如果有批注正在编辑则不触发
   try {
     await handleSelectionChange()
     // 弹出工具栏
@@ -69,16 +69,15 @@ const handleMouseUp = async () => {
         config
       })
       console.log(textTypeName)
+      let key
       switch (textTypeName) {
         case Config.m_underline:
           await updateStrByClassName('m_underline')
           break
         case Config.m_comment:
           // 生成唯一comment-id-xxx,
-          let key = 'm_comment-id-' + uuid()
+          key = 'm_comment-id-' + uuid()
           await updateStrByClassName(key)
-          await nextTick()
-          emits('takeComment', { key, value: '' })
           break
         case Config.d_underline:
           await updateStrByClassName('d_underline')
@@ -86,6 +85,17 @@ const handleMouseUp = async () => {
       }
       // 等待工具栏操作
       emits('update:modelValue', richText.value)
+      await nextTick()
+      // key存在 及批注情况下暴露出批注的title
+      if (key) {
+        const titleElemArr = richTextMarkerRef.value?.querySelectorAll(`.${key}`)
+        const title = Array.from(titleElemArr!).reduce(
+          (prev, current) => prev + current.innerHTML,
+          ''
+        )
+        emits('takeComment', { key, value: '', title: title || '' })
+      }
+
       addRecord(richText.value)
       Toolbar.close()
     } catch (error) {
@@ -117,7 +127,7 @@ function getToolbarPosition() {
     const { x: x2, y: y2, width: width2 } = rect.value!
     return {
       left: x2 - x1 + (width2 - 70) / 2 + 'px',
-      top: y2 - y1 - 30 + 'px'
+      top: y2 - y1 - 50 + 'px'
     }
   } catch (error) {
     return {
@@ -127,64 +137,18 @@ function getToolbarPosition() {
   }
 }
 
-// 所有的批注数组
-type Comment = {
-  key: string
-  value: string
-}
-const allComments = ref<Comment[]>([])
-
-// 批注输入框
-const commentForm = ref<{ key: string; value: string }[]>([]) // 批注表单
-async function submitComment(index: number) {
-  let currentComment = commentForm.value[index]
-  let comment = allComments.value.find((c) => c.key === currentComment.key)
-  if (comment) {
-    if (!currentComment.value) {
-      // 删除
-      let newStr = await getHtmlStrByNeedRemovedKey(richTextMarkerRef.value!, comment.key)
-      addRecord(newStr) // 新增一条操作记录
-      emits('update:modelValue', newStr)
-      let index = allComments.value.indexOf(comment)
-      allComments.value.splice(index, 1)
-      emits('commentChange', JSON.parse(JSON.stringify(allComments.value)))
-    } else {
-      // 修改
-      emits('commentChange', JSON.parse(JSON.stringify(allComments.value)))
-      if (comment) comment.value = currentComment.value
-    }
-  } else {
-    if (!currentComment.value) {
-      // 撤销新增
-      emits('update:modelValue', undo())
-    } else {
-      // 新增
-      allComments.value.push(currentComment)
-      emits('commentChange', JSON.parse(JSON.stringify(allComments.value)))
-    }
-  }
-  commentForm.value.splice(index, 1)
-}
-
-// 点击展示评论
-function handleClick(e: Event) {
-  if (Date.now() - mousedownTimestamp >= TIME_DIVIDE) return
-  console.log('click', e)
-  // 获取当前点击节点最近的父节点的commentids
-  let ans = getCommentIdsByNode(e.target as HTMLElement)
-  console.log(ans)
-  if (!ans.length) return
-  commentForm.value = allComments.value.filter((item) => ans.includes(item.key))
+function handleClear() {
+  emits('update:modelValue', init())
+  emits('clear')
 }
 </script>
 <style lang="less">
-
 .m_underline {
   border-bottom: 2px solid blue;
 }
 
 [class*='m_comment-id-'] {
-  background-color: red;
+  background-color: #ccd7fa;
   cursor: pointer;
 }
 </style>
@@ -194,6 +158,24 @@ function handleClick(e: Event) {
   position: relative;
   display: inline-block;
   vertical-align: text-top;
+  padding-right: 50px;
+
+  p {
+    margin-bottom: 6px;
+  }
+
+  &:hover .clear {
+    opacity: 1;
+  }
+
+  .clear {
+    position: absolute;
+    top: 2px;
+    right: 10px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all ease .3s;
+  }
 }
 
 .textareaWrapper {

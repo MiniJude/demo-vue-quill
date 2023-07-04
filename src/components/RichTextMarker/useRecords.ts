@@ -35,6 +35,13 @@ export default function useRecords() {
         return records.value[index]
     }
 
+    function init() {
+        let rawStr = records.value[0]
+        records.value = [rawStr]
+        currentIndex.value = 0
+        return rawStr
+    }
+
     return {
         records,
         addRecord,
@@ -42,6 +49,7 @@ export default function useRecords() {
         undo,
         go,
         getRecord,
-        currentRecord
+        currentRecord,
+        init
     }
 }
